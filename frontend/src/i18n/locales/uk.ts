@@ -7564,6 +7564,7 @@ export default {
   },
 
   makerworld: {
+    notDownloadable: "Старий стіл: MakerWorld дозволяє завантажити його лише на своєму сайті.",
     printFlow: {
       title: "Друк з MakerWorld",
       preparing: "Завантаження моделі…",

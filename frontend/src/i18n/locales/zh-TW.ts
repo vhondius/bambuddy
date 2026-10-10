@@ -7507,6 +7507,7 @@ export default {
     noHistory: '尚無檢測紀錄。',
   },
   makerworld: {
+    notDownloadable: "舊版盤：MakerWorld 僅在其官網提供下載。",
     printFlow: {
       title: "從 MakerWorld 列印",
       preparing: "正在下載模型…",

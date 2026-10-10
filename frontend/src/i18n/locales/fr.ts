@@ -7510,6 +7510,7 @@ export default {
     noHistory: 'Aucune détection pour le moment.',
   },
   makerworld: {
+    notDownloadable: "Ancien plateau : MakerWorld ne le propose au téléchargement que sur son propre site.",
     printFlow: {
       title: "Imprimer depuis MakerWorld",
       preparing: "Téléchargement du modèle…",

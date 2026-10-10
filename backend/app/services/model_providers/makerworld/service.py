@@ -213,6 +213,11 @@ class MakerWorldService(ProviderService):
                 if not isinstance(inst, dict):
                     continue
                 iid = inst.get("id")
+                # Only instances design.instances lists can be downloaded: the
+                # rest (older plates, e.g. 53 of the Benchy's 94) carry a
+                # profileId the download endpoint rejects, and MakerWorld's
+                # per-instance download is cookie-gated to its website.
+                inst["downloadable"] = iid in compat_by_id
                 extra = compat_by_id.get(iid)
                 if extra:
                     inst["compatibility"] = extra["compatibility"]
@@ -265,7 +270,16 @@ class MakerWorldService(ProviderService):
             if profile_id is None:
                 raise MakerWorldUnavailableError("MakerWorld returned no instances for this model")
 
-        manifest = await self.get_profile_download(profile_id, alphanumeric_model_id)
+        try:
+            manifest = await self.get_profile_download(profile_id, alphanumeric_model_id)
+        except MakerWorldUnavailableError as exc:
+            if profile_id in {i.get("profileId") for i in design_instances}:
+                raise
+            raise MakerWorldNotFoundError(
+                "MakerWorld doesn't offer this plate for download outside its website — it is an "
+                "older profile without printer information. Pick a plate that lists a printer, or "
+                "download this one on makerworld.com."
+            ) from exc
 
         signed_url = manifest.get("url")
         if not signed_url or not isinstance(signed_url, str):

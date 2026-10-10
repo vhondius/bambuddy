@@ -7572,6 +7572,7 @@ errors: {
   },
 
   makerworld: {
+    notDownloadable: "Äldre platta: MakerWorld erbjuder den bara för nedladdning på sin egen webbplats.",
     printFlow: {
       title: "Skriv ut från MakerWorld",
       preparing: "Laddar ner modellen…",

@@ -7509,6 +7509,7 @@ export default {
     noHistory: 'Nessun rilevamento finora.',
   },
   makerworld: {
+    notDownloadable: "Piatto datato: MakerWorld lo rende scaricabile solo dal proprio sito web.",
     printFlow: {
       title: "Stampa da MakerWorld",
       preparing: "Download del modello…",

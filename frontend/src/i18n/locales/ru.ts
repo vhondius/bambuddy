@@ -7145,6 +7145,7 @@ export default {
     noHistory: "Обнаружений пока нет.",
   },
   makerworld: {
+    notDownloadable: "Старый стол: MakerWorld позволяет скачать его только на своём сайте.",
     printFlow: {
       title: "Печать с MakerWorld",
       preparing: "Загрузка модели…",

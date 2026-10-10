@@ -7509,6 +7509,7 @@ export default {
     noHistory: 'Nenhuma detecção ainda.',
   },
   makerworld: {
+    notDownloadable: "Placa antiga: o MakerWorld só a disponibiliza para download no próprio site.",
     printFlow: {
       title: "Imprimir do MakerWorld",
       preparing: "Baixando o modelo…",

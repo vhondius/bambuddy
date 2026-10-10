@@ -37,10 +37,12 @@ FIXTURES = Path(__file__).resolve().parents[2] / "_fixtures" / "makerworld"
 A1 = 109644
 A1_MINI = 40704
 P1S = 224386
-# The profileId design.instances pairs with the A1 instance (the only one the
-# download endpoint accepts), and the different one the /instances hit lists.
+# The profileId the download endpoint accepts for the A1 instance.
 A1_PROFILE = 35438952
-A1_HIT_PROFILE = 21931235
+# A 2023 plate: listed by /instances but missing from design.instances, and
+# its profileId is refused by the download endpoint (400 "resource not exist").
+LEGACY = 39786
+LEGACY_PROFILE = 21931235
 
 
 async def _resolved(ref: ProviderResourceRef | None = None):
@@ -83,10 +85,12 @@ class TestSelectProfile:
         assert select_profile(instances, "A1", 0.6, None) == (A1, False)
 
     @pytest.mark.asyncio
-    async def test_other_compatibility_is_not_a_match(self):
-        """The A1 instance lists P1S as 'also compatible', but its settings
-        were tuned for the A1; an X1C (listed nowhere) gets the fallback."""
+    async def test_fallback_skips_plates_that_cannot_be_downloaded(self):
+        """An X1C matches nothing (the A1 plate's P1S 'also compatible' isn't
+        a match either), so the first plate is used — the first
+        *downloadable* one, not the legacy plate MakerWorld lists first."""
         instances = (await _resolved()).instances
+        assert instances[0]["id"] == LEGACY and instances[0]["downloadable"] is False
         assert select_profile(instances, "X1C", 0.4, None) == (A1, False)
 
     @pytest.mark.asyncio
@@ -95,17 +99,19 @@ class TestSelectProfile:
         assert select_profile(instances, "A1", 0.4, A1) == (A1, True)
         assert select_profile(instances, "P1S", 0.4, A1) == (A1, False)
         # A real profileId in the fragment is accepted too.
-        assert select_profile(instances, "A1", 0.4, A1_HIT_PROFILE) == (A1, True)
+        assert select_profile(instances, "A1", 0.4, A1_PROFILE) == (A1, True)
+        # A link to a legacy plate is still honoured; the download says why
+        # it can't be fetched.
+        assert select_profile(instances, "A1", 0.4, LEGACY) == (LEGACY, False)
 
     def test_no_instances(self):
         assert select_profile([], "X1C", 0.4, None) == (None, False)
 
 
 @pytest.mark.asyncio
-async def test_download_maps_instance_and_hit_ids_to_the_designs_profile():
+async def test_download_maps_the_links_instance_id_to_its_profile():
     """The download endpoint answers 400 'resource not exist' for the link's
-    instance id and for the /instances hit's profileId; only the profileId
-    design.instances pairs with the instance works."""
+    instance id; only the profileId design.instances pairs with it works."""
     svc = MakerWorldService(client=MagicMock(spec=httpx.AsyncClient))
     svc.get_design = AsyncMock(return_value=json.loads((FIXTURES / "design.json").read_text()))
     svc.get_profile_download = AsyncMock(return_value={"url": "https://makerworld.bblmw.com/x.3mf", "name": "b.3mf"})
@@ -116,6 +122,22 @@ async def test_download_maps_instance_and_hit_ids_to_the_designs_profile():
 
     await svc.get_download(ProviderResourceRef(source_type="makerworld", external_id="40146", sub_id=str(A1_PROFILE)))
     svc.get_profile_download.assert_awaited_with(A1_PROFILE, "US2262720d55a8f6")
+
+
+@pytest.mark.asyncio
+async def test_legacy_plate_download_explains_itself():
+    from backend.app.services.model_providers.makerworld.errors import (
+        MakerWorldNotFoundError,
+        MakerWorldUnavailableError,
+    )
+
+    svc = MakerWorldService(client=MagicMock(spec=httpx.AsyncClient))
+    svc.get_design = AsyncMock(return_value=json.loads((FIXTURES / "design.json").read_text()))
+    svc.get_profile_download = AsyncMock(
+        side_effect=MakerWorldUnavailableError("Bambu Lab API unexpected status 400 for profile 39786")
+    )
+    with pytest.raises(MakerWorldNotFoundError, match="older profile"):
+        await svc.get_download(ProviderResourceRef(source_type="makerworld", external_id="40146", sub_id=str(LEGACY)))
 
 
 def test_embedded_slice_request_names_the_files_own_presets():

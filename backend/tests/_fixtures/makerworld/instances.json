@@ -1,8 +1,9 @@
 {
-  "total": 3,
+  "total": 4,
   "hits": [
-    {"id": 109644, "profileId": 21931235, "title": "14min44s, Bambu PLA Basic, A1", "materialCnt": 1, "needAms": false},
-    {"id": 40704, "profileId": 21931100, "title": "12min42s, Bambu PLA Basic, A1 mini", "materialCnt": 1, "needAms": false},
-    {"id": 224386, "profileId": 773560001, "title": "14m33s Printtime P1P /P1S und P2S orignal SD Karten Datei", "materialCnt": 1, "needAms": false}
+    {"id": 39786, "profileId": 21931235, "title": "0.25mm layer, 2 walls, 10% infill", "materialCnt": 1, "needAms": false},
+    {"id": 109644, "profileId": 35438952, "title": "14min44s, Bambu PLA Basic, A1", "materialCnt": 1, "needAms": false},
+    {"id": 40704, "profileId": 35118578, "title": "12min42s, Bambu PLA Basic, A1 mini", "materialCnt": 1, "needAms": false},
+    {"id": 224386, "profileId": 773568064, "title": "14m33s Printtime P1P /P1S und P2S orignal SD Karten Datei", "materialCnt": 1, "needAms": false}
   ]
 }

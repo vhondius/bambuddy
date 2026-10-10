@@ -7574,6 +7574,7 @@ export default {
   },
 
   makerworld: {
+    notDownloadable: "Older plate: MakerWorld only offers it for download on its own website.",
     printFlow: {
       title: "Print from MakerWorld",
       preparing: "Downloading the model…",

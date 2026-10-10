@@ -7574,6 +7574,7 @@ export default {
   },
 
   makerworld: {
+    notDownloadable: "Oudere plaat: MakerWorld biedt deze alleen op de eigen website als download aan.",
     printFlow: {
       title: "Printen vanaf MakerWorld",
       preparing: "Model downloaden…",

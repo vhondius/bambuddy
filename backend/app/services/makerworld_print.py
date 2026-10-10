@@ -82,12 +82,14 @@ def select_profile(
     A ``#profileId-…`` from the link always wins — the user picked that plate
     set. Despite its name it carries the *instance* id (a real profileId is
     accepted too). It is ``matched`` only if made for this printer.
-    Otherwise the first instance made for this printer, else the first one
-    (unmatched, so the caller falls back to the user's own presets).
+    Otherwise the first downloadable instance made for this printer, else
+    the first downloadable one (unmatched, so the caller falls back to the
+    user's own presets).
     """
-    candidates = [i for i in instances if isinstance(i.get("id"), int)]
+    candidates = [i for i in instances if isinstance(i.get("id"), int) and i.get("downloadable", True)]
+    everything = [i for i in instances if isinstance(i.get("id"), int)]
     if link_id:
-        inst = next((i for i in candidates if link_id in (i["id"], i.get("profileId"))), None)
+        inst = next((i for i in everything if link_id in (i["id"], i.get("profileId"))), None)
         if inst is None:
             return link_id, False
         return inst["id"], instance_matches_printer(inst, printer_model, printer_nozzle)

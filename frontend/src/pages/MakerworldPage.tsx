@@ -387,7 +387,7 @@ export function MakerworldPage() {
     if (!resolved) return;
     const plates = resolved.instances.filter((inst) => {
       const pid = pickNumber(inst, 'profileId');
-      return pid !== null && !importsByProfile[pid];
+      return pid !== null && !importsByProfile[pid] && inst?.['downloadable'] !== false;
     });
     if (plates.length === 0) return;
 
@@ -436,7 +436,15 @@ export function MakerworldPage() {
 
   const design = resolved?.design;
   const creator = pickObject(design, 'designCreator');
-  const instances = resolved?.instances ?? [];
+  // Downloadable plates first: older MakerWorld plates (`downloadable:
+  // false` from resolve) can only be downloaded on makerworld.com itself.
+  const instances = useMemo(
+    () =>
+      [...(resolved?.instances ?? [])].sort(
+        (a, b) => Number(a?.['downloadable'] === false) - Number(b?.['downloadable'] === false),
+      ),
+    [resolved],
+  );
   const alreadyImported = (resolved?.already_imported_library_ids.length ?? 0) > 0;
 
   // Only block Print Now / Import actions on an import-capable login.
@@ -649,6 +657,7 @@ export function MakerworldPage() {
                 const cover = pickString(inst, 'cover');
                 const materialCnt = pickNumber(inst, 'materialCnt');
                 const needAms = inst?.['needAms'] === true;
+                const notDownloadable = inst?.['downloadable'] === false;
                 const downloadsOnInstance = pickNumber(inst, 'downloadCount');
                 // Primary printer the file was sliced for (devProductName,
                 // e.g. "A1") + the alt-compatibility list MakerWorld marks.
@@ -729,14 +738,17 @@ export function MakerworldPage() {
                             })}
                           </p>
                         )}
+                        {notDownloadable && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{t('makerworld.notDownloadable')}</p>
+                        )}
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={!canImport || !canDownload || isImporting || isPrinting || bulkProgress !== null}
+                          disabled={!canImport || !canDownload || notDownloadable || isImporting || isPrinting || bulkProgress !== null}
                           onClick={() => importMutation.mutate({ instanceId, profileId })}
-                          title={!canDownload ? t('makerworld.signInRequiredTitle') : undefined}
+                          title={notDownloadable ? t('makerworld.notDownloadable') : !canDownload ? t('makerworld.signInRequiredTitle') : undefined}
                         >
                           {isImporting ? (
                             <>
@@ -756,9 +768,9 @@ export function MakerworldPage() {
                         <Button
                           variant="primary"
                           size="sm"
-                          disabled={!canImport || !canDownload || isImporting || isPrinting || bulkProgress !== null}
+                          disabled={!canImport || !canDownload || notDownloadable || isImporting || isPrinting || bulkProgress !== null}
                           onClick={() => sliceMutation.mutate({ instanceId, profileId })}
-                          title={!canDownload ? t('makerworld.signInRequiredTitle') : undefined}
+                          title={notDownloadable ? t('makerworld.notDownloadable') : !canDownload ? t('makerworld.signInRequiredTitle') : undefined}
                         >
                           {isPrinting ? (
                             <>

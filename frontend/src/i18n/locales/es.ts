@@ -7531,6 +7531,7 @@ export default {
   },
 
   makerworld: {
+    notDownloadable: "Placa antigua: MakerWorld solo la ofrece para descargar en su propio sitio web.",
     printFlow: {
       title: "Imprimir desde MakerWorld",
       preparing: "Descargando el modelo…",

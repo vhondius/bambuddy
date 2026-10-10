@@ -7460,6 +7460,7 @@ export default {
   },
 
   makerworld: {
+    notDownloadable: "Eski plaka: MakerWorld bunu yalnızca kendi web sitesinde indirmeye sunuyor.",
     printFlow: {
       title: "MakerWorld'den yazdır",
       preparing: "Model indiriliyor…",

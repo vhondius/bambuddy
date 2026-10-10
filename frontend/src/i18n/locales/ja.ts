@@ -7523,6 +7523,7 @@ export default {
     noHistory: 'まだ検出はありません。',
   },
   makerworld: {
+    notDownloadable: "古いプレート：MakerWorld の公式サイトでのみダウンロードできます。",
     printFlow: {
       title: "MakerWorldから印刷",
       preparing: "モデルをダウンロード中…",

@@ -6964,6 +6964,7 @@ export default {
     noHistory: '아직 감지 없음.'
   },
   makerworld: {
+    notDownloadable: "이전 플레이트: MakerWorld 웹사이트에서만 다운로드할 수 있습니다.",
     printFlow: {
       title: "MakerWorld에서 출력",
       preparing: "모델 다운로드 중…",

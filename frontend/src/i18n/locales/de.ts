@@ -7523,6 +7523,7 @@ export default {
   },
 
   makerworld: {
+    notDownloadable: "Ältere Platte: MakerWorld bietet sie nur auf der eigenen Website zum Download an.",
     printFlow: {
       title: "Von MakerWorld drucken",
       preparing: "Modell wird heruntergeladen…",
