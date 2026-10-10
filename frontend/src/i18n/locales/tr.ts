@@ -7460,6 +7460,22 @@ export default {
   },
 
   makerworld: {
+    printFlow: {
+      title: "MakerWorld'den yazdır",
+      preparing: "Model indiriliyor…",
+      slicing: "Dilimleniyor…",
+      sliceFailed: "Dilimleme başarısız",
+      pickPrinter: "Bunu hangi yazıcı yazdırsın?",
+      retry: "Tekrar dene",
+      queued: "Baskı kuyruğa gönderildi",
+      plate: "Plaka {{n}}",
+      printTime: "Baskı süresi",
+      plateType: "Baskı plakası",
+      filaments: "Filamentler",
+      unmapped: "AMS yuvası yok",
+      gcodePreview: "G-code önizleme",
+      print: "Yazdır",
+    },
     title: 'MakerWorld',
     description: 'Bambu Handy uygulamasına gitmeden — doğrudan Bambuddy\'den içe aktarmak ve yazdırmak için bir MakerWorld model URL\'si yapıştırın.',
     pasteUrlHeader: "MakerWorld'den İçe Aktar",

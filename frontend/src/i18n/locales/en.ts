@@ -7574,6 +7574,22 @@ export default {
   },
 
   makerworld: {
+    printFlow: {
+      title: "Print from MakerWorld",
+      preparing: "Downloading the model…",
+      slicing: "Slicing…",
+      sliceFailed: "Slicing failed",
+      pickPrinter: "Which printer should print this?",
+      retry: "Try again",
+      queued: "Print sent to the queue",
+      plate: "Plate {{n}}",
+      printTime: "Print time",
+      plateType: "Build plate",
+      filaments: "Filaments",
+      unmapped: "no AMS slot",
+      gcodePreview: "G-code preview",
+      print: "Print",
+    },
     title: 'MakerWorld',
     description: 'Paste a MakerWorld model URL to import and print it directly from Bambuddy — without leaving for the Bambu Handy app.',
     pasteUrlHeader: 'Import from MakerWorld',

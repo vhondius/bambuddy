@@ -610,6 +610,7 @@ NOT_A_FETCH_TARGET = {
     ("BOMItemCreate", "sourcing_url"),  # stored supplier link, never fetched
     ("BOMItemUpdate", "sourcing_url"),
     ("MakerWorldResolveRequest", "url"),  # parsed for a model id; fetches go to a pinned CDN allowlist
+    ("MakerWorldPrintRequest", "url"),  # same parse as resolve; never fetched itself
     ("DeviceRegisterRequest", "backend_url"),  # the device's view of Bambuddy's own address
     ("HeartbeatRequest", "backend_url"),
     ("SystemConfigRequest", "backend_url"),

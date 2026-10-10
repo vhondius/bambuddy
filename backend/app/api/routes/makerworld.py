@@ -44,6 +44,7 @@ from backend.app.models.user import User
 from backend.app.schemas.makerworld import (
     MakerWorldImportRequest,
     MakerWorldImportResponse,
+    MakerWorldPrintRequest,
     MakerWorldRecentImport,
     MakerWorldResolvedModel,
     MakerWorldResolveRequest,
@@ -450,6 +451,156 @@ async def import_instance(
         profile_id=resolved_profile_id,
         was_existing=was_existing,
     )
+
+
+async def _pick_printer(db: AsyncSession, printer_id: int | None):
+    """The printer to print on. Never guessed between several: with more
+    than one active printer and none named, 409 hands the list back so the
+    UI can ask."""
+    from backend.app.models.printer import Printer
+
+    if printer_id is not None:
+        printer = await db.get(Printer, printer_id)
+        if printer is None:
+            raise HTTPException(status_code=404, detail="Printer not found")
+        return printer
+    printers = (
+        (await db.execute(select(Printer).where(Printer.is_active.is_(True)).order_by(Printer.id))).scalars().all()
+    )
+    if len(printers) == 1:
+        return printers[0]
+    if not printers:
+        raise HTTPException(status_code=409, detail={"code": "no_printers", "printers": []})
+    raise HTTPException(
+        status_code=409,
+        detail={
+            "code": "printer_required",
+            "printers": [{"id": p.id, "name": p.name, "model": p.model} for p in printers],
+        },
+    )
+
+
+@router.post(
+    "/print",
+    status_code=202,
+    # The flow imports (provider import permission, checked below once the
+    # URL names the provider), slices into the library and ends in a queue
+    # dispatch, so it needs all three.
+    dependencies=[Depends(require_permission_if_auth_enabled(Permission.LIBRARY_UPLOAD, Permission.QUEUE_CREATE))],
+)
+async def start_print_flow(
+    body: MakerWorldPrintRequest,
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    api_key_cloud_owner: User | None = Depends(resolve_api_key_cloud_owner),
+):
+    """One-tap print: resolve → pick profile → import → background slice.
+
+    Returns 202 ``{job_id, ...}``; the slice job's result (pushed as
+    ``slice_job_updated`` over the WebSocket, or polled at
+    ``/slice-jobs/{id}``) carries the sliced library file and the per-plate
+    AMS mapping for the preview. Nothing is dispatched here — the client
+    queues the print on confirm.
+    """
+    from pathlib import Path
+
+    from backend.app.api.routes.library import slice_and_persist
+    from backend.app.core.config import settings as app_settings
+    from backend.app.core.database import async_session
+    from backend.app.services.makerworld_print import embedded_slice_request, plate_mappings, select_profile
+    from backend.app.services.printer_manager import printer_manager
+    from backend.app.services.slice_dispatch import http_exception_to_job_error, slice_dispatch
+
+    provider = _provider_for_url(body.url)
+    current_user = await _authorize_for_provider(provider, provider.import_permission, credentials, x_api_key)
+    try:
+        ref = provider.parse_url(body.url)
+    except ProviderError as exc:
+        raise _map_service_error(exc) from exc
+
+    printer = await _pick_printer(db, body.printer_id)
+    status = printer_manager.get_status(printer.id)
+    printer_nozzle: float | None = None
+    try:
+        printer_nozzle = float(status.nozzles[0].nozzle_diameter) if status else None
+    except (AttributeError, IndexError, TypeError, ValueError):
+        pass
+
+    service = await _build_service(db, provider, current_user, api_key_cloud_owner)
+    try:
+        resolved = await service.resolve(ref)
+    except ProviderError as exc:
+        raise _map_service_error(exc) from exc
+    finally:
+        await service.close()
+
+    profile_id, matched = select_profile(
+        resolved.instances, printer.model, printer_nozzle, int(ref.sub_id) if ref.sub_id else None
+    )
+    if profile_id is None:
+        raise HTTPException(status_code=404, detail="This model has no downloadable print profile")
+
+    imported = await import_instance(
+        MakerWorldImportRequest(model_id=int(ref.external_id), source_type=provider.source_type, profile_id=profile_id),
+        db=db,
+        credentials=credentials,
+        x_api_key=x_api_key,
+        api_key_cloud_owner=api_key_cloud_owner,
+    )
+    source = await db.get(LibraryFile, imported.library_file_id)
+    src_path = Path(app_settings.base_dir) / source.file_path
+    model_bytes = src_path.read_bytes()
+    request = embedded_slice_request(model_bytes, plate=0)
+
+    cloud_token_user = current_user or api_key_cloud_owner
+    user_id = cloud_token_user.id if cloud_token_user else None
+    printer_id = printer.id
+    folder_id = source.folder_id
+    source_id = source.id
+    model_filename = source.filename
+
+    async def _run(job_id: int) -> dict:
+        async with async_session() as task_db:
+            try:
+                sliced = await slice_and_persist(
+                    task_db,
+                    model_bytes=model_bytes,
+                    model_filename=model_filename,
+                    folder_id=folder_id,
+                    extra_metadata={"sliced_from_library_file_id": source_id},
+                    request=request,
+                    current_user_id=user_id,
+                    job_id=job_id,
+                )
+            except HTTPException as exc:
+                raise http_exception_to_job_error(exc) from exc
+            out_file = await task_db.get(LibraryFile, sliced.library_file_id)
+            plates = await plate_mappings(
+                task_db, printer_id, out_file.id, Path(app_settings.base_dir) / out_file.file_path
+            )
+        return {
+            **sliced.model_dump(),
+            "printer_id": printer_id,
+            "source_library_file_id": source_id,
+            "profile_id": profile_id,
+            "plates": [{"plate": p["plate"], "ams_mapping": p["ams_mapping"]} for p in plates],
+        }
+
+    # The job writes from its own session; don't leave this request's
+    # transaction (the import's folder/row writes) open underneath it.
+    await db.commit()
+    job = await slice_dispatch.enqueue(
+        kind="library_file", source_id=source_id, source_name=model_filename, owner_id=user_id, run=_run
+    )
+    return {
+        "job_id": job.id,
+        "status_url": f"/api/v1/slice-jobs/{job.id}",
+        "printer_id": printer_id,
+        "profile_id": profile_id,
+        "source_library_file_id": source_id,
+        "matched_profile": matched,
+    }
 
 
 @router.get("/recent-imports", response_model=list[MakerWorldRecentImport])

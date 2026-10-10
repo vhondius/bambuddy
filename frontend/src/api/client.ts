@@ -2097,6 +2097,33 @@ export interface SliceJobProgress {
   multi_plate_count?: number;
 }
 
+/** Body of the 202 from `POST /makerworld/print` (one-tap print flow). */
+export interface MakerworldPrintStart {
+  job_id: number;
+  status_url: string;
+  printer_id: number;
+  profile_id: number;
+  source_library_file_id: number;
+  matched_profile: boolean;
+}
+
+/** One sliced plate in a MakerWorld print-flow result: the AMS mapping the
+ *  queue would use plus the plate's filament requirements (slot_id, type,
+ *  color, used_grams). */
+export interface MakerworldPrintPlate {
+  plate: number;
+  ams_mapping: number[] | null;
+  requirements: Array<{ slot_id: number; type: string; color: string; used_grams?: number }>;
+}
+
+/** `result` of a completed MakerWorld print-flow slice job. */
+export interface MakerworldPrintResult extends SliceResponse {
+  printer_id: number;
+  source_library_file_id: number;
+  profile_id: number;
+  plates: MakerworldPrintPlate[];
+}
+
 export interface SliceJobState {
   job_id: number;
   status: SliceJobStatus;
@@ -2110,7 +2137,7 @@ export interface SliceJobState {
    * slicer emits its first frame (early "Initializing" phase) or when
    * the sidecar doesn't support progress. */
   progress: SliceJobProgress | null;
-  result?: SliceResponse | SliceArchiveResponse;
+  result?: SliceResponse | SliceArchiveResponse | MakerworldPrintResult;
   error_status?: number;
   error_detail?: string;
 }
@@ -6090,6 +6117,13 @@ export const api = {
     request<MakerworldResolvedModel>('/makerworld/resolve', {
       method: 'POST',
       body: JSON.stringify({ url }),
+    }),
+  /** One-tap print: resolve + import + background slice. 409 with
+   *  `detail.code === 'printer_required'` lists printers to choose from. */
+  startMakerworldPrint: (url: string, printerId?: number | null) =>
+    request<MakerworldPrintStart>('/makerworld/print', {
+      method: 'POST',
+      body: JSON.stringify({ url, printer_id: printerId ?? null }),
     }),
   getMakerworldRecentImports: (limit = 10) =>
     request<MakerworldRecentImport[]>(`/makerworld/recent-imports?limit=${limit}`),

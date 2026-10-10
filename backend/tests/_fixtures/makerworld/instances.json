@@ -1,0 +1,8 @@
+{
+  "total": 3,
+  "hits": [
+    {"id": 1452154, "profileId": 298919107, "title": "9 cells - A1", "materialCnt": 1, "needAms": false},
+    {"id": 1452158, "profileId": 298919564, "title": "12 cells - X1C", "materialCnt": 2, "needAms": true},
+    {"id": 1452160, "profileId": 298919777, "title": "12 cells - X1C 0.6", "materialCnt": 2, "needAms": true}
+  ]
+}

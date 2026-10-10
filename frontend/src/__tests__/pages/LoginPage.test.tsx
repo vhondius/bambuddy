@@ -819,7 +819,7 @@ describe('LoginPage', () => {
 
     // BrowserRouter reads router state from history.state.usr, which is where
     // ProtectedRoute's navigate('/login', { state: { from } }) puts it.
-    function arriveAtLogin(from?: { pathname: string; search?: string }) {
+    function arriveAtLogin(from?: { pathname: string; search?: string; hash?: string }) {
       window.history.replaceState(from ? { usr: { from }, key: 'test', idx: 0 } : null, '', '/login');
       Object.defineProperty(window, 'location', {
         configurable: true,
@@ -836,6 +836,16 @@ describe('LoginPage', () => {
         expect(window.location.href).toBe('https://auth.test/authorize?state=xyz');
       });
       expect(sessionStorage.getItem('auth_post_login_redirect')).toBe('/archives?id=5');
+    });
+
+    it('keeps a #profileId fragment of the page the user was sent from', async () => {
+      arriveAtLogin({ pathname: '/makerworld', search: '?url=x', hash: '#profileId-5' });
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(window.location.href).toBe('https://auth.test/authorize?state=xyz');
+      });
+      expect(sessionStorage.getItem('auth_post_login_redirect')).toBe('/makerworld?url=x#profileId-5');
     });
 
     it('stashes nothing when the user opened /login directly', async () => {

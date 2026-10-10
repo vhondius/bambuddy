@@ -123,3 +123,13 @@ class MakerWorldStatus(BaseModel):
         default=False,
         description="A token is stored but Bambu has rejected it — the user must sign in to Bambu Cloud again.",
     )
+
+
+class MakerWorldPrintRequest(BaseModel):
+    """Body for ``POST /makerworld/print`` — the one-tap print flow."""
+
+    url: str = Field(..., description="MakerWorld model URL; a #profileId-… fragment selects that profile")
+    printer_id: int | None = Field(
+        default=None,
+        description="Target printer. Required when more than one printer is configured (409 otherwise).",
+    )

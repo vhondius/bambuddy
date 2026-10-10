@@ -6,7 +6,10 @@ printer-side dispatch.
 
 The frontend kicks off a slice via `POST /library/files/{id}/slice` or
 `POST /archives/{id}/slice`, gets back `{job_id, status_url}`, then polls
-`GET /slice-jobs/{id}` until status is `completed` or `failed`.
+`GET /slice-jobs/{id}` until status is `completed` or `failed`. Every state
+and progress change is also pushed to the job owner as a `slice_job_updated`
+WebSocket message carrying the same body, for clients that would rather not
+poll.
 """
 
 from __future__ import annotations
@@ -105,6 +108,7 @@ class SliceDispatchService:
     ) -> None:
         job.started_at = datetime.now(timezone.utc)
         job.status = "running"
+        await _broadcast(job)
         try:
             result = await run(job.id)
             job.result = result
@@ -122,6 +126,7 @@ class SliceDispatchService:
         finally:
             job.completed_at = datetime.now(timezone.utc)
             self._tasks.pop(job.id, None)
+            await _broadcast(job)
 
     def get(self, job_id: int) -> SliceJob | None:
         return self._jobs.get(job_id)
@@ -137,6 +142,10 @@ class SliceDispatchService:
         job = self._jobs.get(job_id)
         if job is not None:
             job.progress = progress
+            try:
+                asyncio.get_running_loop().create_task(_broadcast(job))
+            except RuntimeError:
+                pass  # no loop (sync test caller) — polling still sees it
 
     def _sweep_locked(self) -> None:
         """Drop finished jobs older than the retention window. Caller holds
@@ -151,6 +160,42 @@ class SliceDispatchService:
         ]
         for jid in stale_ids:
             self._jobs.pop(jid, None)
+
+
+def job_body(job: SliceJob) -> dict[str, Any]:
+    """The client-facing view of a job, shared by the polling endpoint and
+    the WebSocket push."""
+    body: dict[str, Any] = {
+        "job_id": job.id,
+        "status": job.status,
+        "kind": job.kind,
+        "source_id": job.source_id,
+        "source_name": job.source_name,
+        "created_at": job.created_at.isoformat(),
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        # Live progress fed by the sidecar's --pipe channel. Null when
+        # the slicer hasn't emitted yet (early "Initializing" phase) or
+        # the sidecar doesn't support progress (older versions).
+        "progress": job.progress,
+    }
+    if job.status == "completed":
+        body["result"] = job.result
+    elif job.status == "failed":
+        body["error_status"] = job.error_status
+        body["error_detail"] = job.error_detail
+    return body
+
+
+async def _broadcast(job: SliceJob) -> None:
+    """Push the job's state to its owner. Best-effort: a WebSocket hiccup
+    must never fail the slice."""
+    from backend.app.core.websocket import ws_manager
+
+    try:
+        await ws_manager.broadcast_to_user(job.owner_id, {"type": "slice_job_updated", "data": job_body(job)})
+    except Exception:
+        logger.debug("slice_job_updated broadcast failed for job %s", job.id, exc_info=True)
 
 
 class _SliceJobError(Exception):

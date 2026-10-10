@@ -566,6 +566,12 @@ export function useWebSocket() {
           queryClient.invalidateQueries({ queryKey: ['pipeline-runs', message.run.pipeline_id] });
         }
         break;
+
+      case 'slice_job_updated':
+        // Same body as GET /slice-jobs/{id}; the MakerWorld print flow
+        // listens for it instead of polling.
+        window.dispatchEvent(new CustomEvent('bambuddy:slice-job', { detail: message.data }));
+        break;
     }
   }, [queryClient, debouncedInvalidate, invalidateSlotQueries, throttledPrinterStatusUpdate, showToast, t]);
 

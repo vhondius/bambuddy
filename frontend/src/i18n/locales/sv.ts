@@ -7572,6 +7572,22 @@ errors: {
   },
 
   makerworld: {
+    printFlow: {
+      title: "Skriv ut från MakerWorld",
+      preparing: "Laddar ner modellen…",
+      slicing: "Slicar…",
+      sliceFailed: "Slicningen misslyckades",
+      pickPrinter: "Vilken skrivare ska skriva ut detta?",
+      retry: "Försök igen",
+      queued: "Utskriften lades i kön",
+      plate: "Platta {{n}}",
+      printTime: "Utskriftstid",
+      plateType: "Byggplatta",
+      filaments: "Filament",
+      unmapped: "ingen AMS-plats",
+      gcodePreview: "G-code-förhandsvisning",
+      print: "Skriv ut",
+    },
     title: 'MakerWorld',
     description: 'Klistra in en MakerWorld-modell-URL för att importera och skriva ut den direkt från Bambuddy — utan att lämna för Bambu Handy-app.',
     pasteUrlHeader: 'Importera från MakerWorld',

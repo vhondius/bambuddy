@@ -1,0 +1,40 @@
+{
+  "id": 1400373,
+  "modelId": "US2bb73b106683e5",
+  "title": "Seed Starter",
+  "instances": [
+    {
+      "id": 1452154,
+      "profileId": 298919107,
+      "title": "9 cells - A1",
+      "extention": {
+        "modelInfo": {
+          "compatibility": {"devModelName": "N2S", "devProductName": "A1", "nozzleDiameter": 0.4},
+          "otherCompatibility": [{"devModelName": "C12", "devProductName": "P1S", "nozzleDiameter": 0.4}]
+        }
+      }
+    },
+    {
+      "id": 1452158,
+      "profileId": 298919564,
+      "title": "12 cells - X1C",
+      "extention": {
+        "modelInfo": {
+          "compatibility": {"devModelName": "BL-P001", "devProductName": "X1 Carbon", "nozzleDiameter": 0.4},
+          "otherCompatibility": []
+        }
+      }
+    },
+    {
+      "id": 1452160,
+      "profileId": 298919777,
+      "title": "12 cells - X1C 0.6",
+      "extention": {
+        "modelInfo": {
+          "compatibility": {"devModelName": "BL-P001", "devProductName": "X1 Carbon", "nozzleDiameter": 0.6},
+          "otherCompatibility": []
+        }
+      }
+    }
+  ]
+}

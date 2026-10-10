@@ -7523,6 +7523,22 @@ export default {
   },
 
   makerworld: {
+    printFlow: {
+      title: "Von MakerWorld drucken",
+      preparing: "Modell wird heruntergeladen…",
+      slicing: "Wird gesliced…",
+      sliceFailed: "Slicen fehlgeschlagen",
+      pickPrinter: "Auf welchem Drucker soll gedruckt werden?",
+      retry: "Erneut versuchen",
+      queued: "Druck zur Warteschlange hinzugefügt",
+      plate: "Platte {{n}}",
+      printTime: "Druckzeit",
+      plateType: "Druckplatte",
+      filaments: "Filamente",
+      unmapped: "kein AMS-Slot",
+      gcodePreview: "G-Code-Vorschau",
+      print: "Drucken",
+    },
     title: 'MakerWorld',
     description: 'Füge eine MakerWorld-Modell-URL ein, um es direkt aus Bambuddy zu importieren und zu drucken — ohne die Bambu Handy App zu öffnen.',
     pasteUrlHeader: 'Von MakerWorld importieren',

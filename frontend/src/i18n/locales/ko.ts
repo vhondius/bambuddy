@@ -6964,6 +6964,22 @@ export default {
     noHistory: '아직 감지 없음.'
   },
   makerworld: {
+    printFlow: {
+      title: "MakerWorld에서 출력",
+      preparing: "모델 다운로드 중…",
+      slicing: "슬라이싱 중…",
+      sliceFailed: "슬라이싱 실패",
+      pickPrinter: "어느 프린터로 출력할까요?",
+      retry: "다시 시도",
+      queued: "출력이 대기열에 추가되었습니다",
+      plate: "플레이트 {{n}}",
+      printTime: "출력 시간",
+      plateType: "빌드 플레이트",
+      filaments: "필라멘트",
+      unmapped: "AMS 슬롯 없음",
+      gcodePreview: "G-code 미리보기",
+      print: "출력",
+    },
     title: 'MakerWorld',
     description: 'MakerWorld 모델 URL을 붙여넣어 Bambu Handy 앱을 떠나지 않고 Bambuddy에서 직접 가져오고 인쇄하세요.',
     pasteUrlHeader: 'MakerWorld에서 가져오기',

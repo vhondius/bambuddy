@@ -122,9 +122,11 @@ export function LoginPage() {
   // stash (used to survive the OIDC provider round-trip, which kills React
   // state). Falls back to `/` and rejects unsafe targets via sanitize.
   function resolvePostLoginRedirect(): string {
-    const fromState = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+    const fromState = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
     if (fromState?.pathname) {
-      const target = `${fromState.pathname}${fromState.search ?? ''}`;
+      // Hash included: a MakerWorld deep link may carry #profileId-… (it lives
+      // on the target page, so it can't collide with /login's own #oidc_token).
+      const target = `${fromState.pathname}${fromState.search ?? ''}${fromState.hash ?? ''}`;
       const safe = sanitizeRedirectTarget(target);
       if (safe) return safe;
     }
@@ -207,9 +209,9 @@ export function LoginPage() {
     );
     Promise.race([api.getOIDCAuthorizeUrl(providerId), timeoutPromise])
       .then((result) => {
-        const fromState = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+        const fromState = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
         if (fromState?.pathname) {
-          stashPostLoginRedirect(`${fromState.pathname}${fromState.search ?? ''}`);
+          stashPostLoginRedirect(`${fromState.pathname}${fromState.search ?? ''}${fromState.hash ?? ''}`);
         }
         window.location.href = (result as { auth_url: string }).auth_url;
       })
@@ -407,9 +409,9 @@ export function LoginPage() {
       // Stash the post-login destination from router state so it survives the
       // provider round-trip (window.location.href kills React state). If the
       // user landed on /login directly, fromState is absent and we don't stash.
-      const fromState = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+      const fromState = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
       if (fromState?.pathname) {
-        stashPostLoginRedirect(`${fromState.pathname}${fromState.search ?? ''}`);
+        stashPostLoginRedirect(`${fromState.pathname}${fromState.search ?? ''}${fromState.hash ?? ''}`);
       }
       window.location.href = data.auth_url;
     },

@@ -363,3 +363,131 @@ describe('MakerworldPage', () => {
     expect(document.body.innerHTML).not.toContain('window.__pwned');
   });
 });
+
+describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
+  const MODEL = 'https://makerworld.com/en/models/1400373#profileId-298919564';
+
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  function usePrintFlowHandlers(printBodies: Array<Record<string, unknown>>) {
+    useAuthedHandlers();
+    server.use(
+      http.post('*/makerworld/resolve', () => HttpResponse.json(resolveResponse())),
+      http.post('*/makerworld/print', async ({ request }) => {
+        printBodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json(
+          { job_id: 41, status_url: '/api/v1/slice-jobs/41', printer_id: 3, profile_id: 298919564, source_library_file_id: 7, matched_profile: true },
+          { status: 202 },
+        );
+      }),
+      http.get('*/slice-jobs/41', () =>
+        HttpResponse.json({
+          job_id: 41,
+          status: 'completed',
+          kind: 'library_file',
+          source_id: 7,
+          source_name: 'seed.3mf',
+          created_at: '',
+          started_at: '',
+          completed_at: '',
+          progress: null,
+          result: {
+            library_file_id: 8,
+            name: 'seed.gcode.3mf',
+            print_time_seconds: 3600,
+            filament_used_g: 12,
+            filament_used_mm: 4000,
+            used_embedded_settings: true,
+            printer_id: 3,
+            source_library_file_id: 7,
+            profile_id: 298919564,
+            plates: [{ plate: 1, ams_mapping: [0] }],
+          },
+        }),
+      ),
+      http.get('*/library/files/8/plates', () =>
+        HttpResponse.json({
+          file_id: 8,
+          filename: 'seed.gcode.3mf',
+          is_multi_plate: false,
+          plates: [
+            {
+              index: 1,
+              name: null,
+              objects: [],
+              has_thumbnail: true,
+              thumbnail_url: null,
+              print_time_seconds: 3600,
+              filament_used_grams: 12,
+              bed_type: 'Textured PEI Plate',
+              filaments: [{ slot_id: 1, type: 'PLA', color: '#FF0000', used_grams: 12, used_meters: 4 }],
+            },
+          ],
+        }),
+      ),
+      http.get('*/printers/3/status', () => HttpResponse.json({ connected: true, ams: [], vt_tray: [] })),
+    );
+  }
+
+  it('starts the flow with the encoded URL, #profileId included', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    usePrintFlowHandlers(bodies);
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    expect(await screen.findByRole('button', { name: 'Print' })).toBeInTheDocument();
+    expect(bodies).toEqual([{ url: MODEL, printer_id: null }]);
+    expect(await screen.findByText('Textured PEI Plate')).toBeInTheDocument();
+    // The job id lands in the URL so returning from the G-code preview resumes.
+    expect(window.location.search).toContain('job=41');
+  });
+
+  it('puts back a #profileId that an unencoded link left in the page hash', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    usePrintFlowHandlers(bodies);
+    window.history.replaceState(null, '', `/makerworld?url=${MODEL}`);
+    render(<MakerworldPage />);
+
+    await screen.findByRole('button', { name: 'Print' });
+    expect(bodies[0].url).toBe(MODEL);
+  });
+
+  it('works without a #profileId', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    usePrintFlowHandlers(bodies);
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent('https://makerworld.com/en/models/1400373')}`);
+    render(<MakerworldPage />);
+
+    await screen.findByRole('button', { name: 'Print' });
+    expect(bodies[0].url).toBe('https://makerworld.com/en/models/1400373');
+  });
+
+  it('asks which printer when the backend needs one', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    usePrintFlowHandlers(bodies);
+    server.use(
+      http.post('*/makerworld/print', async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        bodies.push(body);
+        if (!body.printer_id) {
+          return HttpResponse.json(
+            { detail: { code: 'printer_required', printers: [{ id: 3, name: 'Office X1C', model: 'X1C' }, { id: 4, name: 'P1S', model: 'P1S' }] } },
+            { status: 409 },
+          );
+        }
+        return HttpResponse.json(
+          { job_id: 41, status_url: '', printer_id: 3, profile_id: 1, source_library_file_id: 7, matched_profile: true },
+          { status: 202 },
+        );
+      }),
+    );
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /Office X1C/ }));
+    await screen.findByRole('button', { name: 'Print' });
+    expect(bodies.map((b) => b.printer_id)).toEqual([null, 3]);
+  });
+});

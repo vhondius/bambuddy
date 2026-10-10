@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, ArrowRight, Check, ChevronLeft, ChevronRight, Download, ExternalLink, FolderOpen, Globe, Images, Loader2, Trash2, X } from 'lucide-react';
@@ -16,6 +16,7 @@ import { Button } from '../components/Button';
 import { Card, CardContent, CardHeader } from '../components/Card';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SliceModal, type SliceSource } from '../components/SliceModal';
+import { MakerworldPrintFlow } from '../components/MakerworldPrintFlow';
 import { Cog } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -199,6 +200,31 @@ export function MakerworldPage() {
     setSliceModalSource({ kind: 'libraryFile', id: libraryFileId, filename });
   };
 
+  // Deep link: /makerworld?url=<encoded MakerWorld URL>[&printer=<id>] opens
+  // the one-tap print flow (the Android companion app and share targets use
+  // it). An unencoded link loses its #profileId-… to the page's own hash, so
+  // put it back. `job` is written once slicing starts, so coming back from
+  // the G-code preview resumes the same job instead of slicing again.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const deepLinkUrl = useMemo(() => {
+    const raw = searchParams.get('url');
+    if (!raw) return null;
+    return !raw.includes('#') && location.hash.startsWith('#profileId') ? raw + location.hash : raw;
+  }, [searchParams, location.hash]);
+  const deepLinkPrinter = Number(searchParams.get('printer')) || null;
+  const deepLinkJob = Number(searchParams.get('job')) || null;
+  const handleFlowJobStarted = useCallback(
+    (jobId: number) => {
+      if (!deepLinkUrl) return;
+      const next = new URLSearchParams(searchParams);
+      next.set('url', deepLinkUrl);
+      next.set('job', String(jobId));
+      setSearchParams(next, { replace: true });
+    },
+    [deepLinkUrl, searchParams, setSearchParams],
+  );
+
   const resolveMutation = useMutation({
     mutationFn: (url: string) => api.resolveMakerworldUrl(url),
     onSuccess: (data, url) => {
@@ -209,6 +235,15 @@ export function MakerworldPage() {
     },
     onError: (err: Error) => showToast(err.message || t('makerworld.errors.resolveFailed'), 'error'),
   });
+
+  // Show the deep-linked model behind the print flow.
+  useEffect(() => {
+    if (!deepLinkUrl) return;
+    setUrlInput(deepLinkUrl);
+    resolveMutation.mutate(deepLinkUrl);
+    // Once per link; resolveMutation is a new object every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkUrl]);
 
   // URL-change detection: if the user edits the URL input away from what
   // ``resolved`` was fetched for, drop the stale preview so they can't
@@ -944,6 +979,17 @@ export function MakerworldPage() {
               profileId: pendingDelete.profileId,
             })
           }
+        />
+      )}
+
+      {deepLinkUrl && (
+        <MakerworldPrintFlow
+          key={deepLinkUrl}
+          url={deepLinkUrl}
+          printerId={deepLinkPrinter}
+          jobId={deepLinkJob}
+          onJobStarted={handleFlowJobStarted}
+          onClose={() => setSearchParams({}, { replace: true })}
         />
       )}
 

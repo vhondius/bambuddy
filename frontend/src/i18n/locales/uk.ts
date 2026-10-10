@@ -7564,6 +7564,22 @@ export default {
   },
 
   makerworld: {
+    printFlow: {
+      title: "Друк з MakerWorld",
+      preparing: "Завантаження моделі…",
+      slicing: "Нарізання…",
+      sliceFailed: "Помилка нарізання",
+      pickPrinter: "На якому принтері друкувати?",
+      retry: "Спробувати ще",
+      queued: "Друк додано до черги",
+      plate: "Стіл {{n}}",
+      printTime: "Час друку",
+      plateType: "Друкарська пластина",
+      filaments: "Філаменти",
+      unmapped: "немає слота AMS",
+      gcodePreview: "Перегляд G-коду",
+      print: "Друк",
+    },
     title: "MakerWorld",
     description: "Вставте модель MakerWorld URL, щоб імпортувати та роздрукувати її безпосередньо з Bambuddy — не виходячи з програми Bambu Handy.",
     pasteUrlHeader: "Імпортувати з MakerWorld",

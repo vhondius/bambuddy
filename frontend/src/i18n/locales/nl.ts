@@ -7574,6 +7574,22 @@ export default {
   },
 
   makerworld: {
+    printFlow: {
+      title: "Printen vanaf MakerWorld",
+      preparing: "Model downloaden…",
+      slicing: "Slicen…",
+      sliceFailed: "Slicen mislukt",
+      pickPrinter: "Op welke printer moet dit geprint worden?",
+      retry: "Opnieuw proberen",
+      queued: "Print toegevoegd aan de wachtrij",
+      plate: "Plaat {{n}}",
+      printTime: "Printtijd",
+      plateType: "Printplaat",
+      filaments: "Filamenten",
+      unmapped: "geen AMS-slot",
+      gcodePreview: "G-code-voorbeeld",
+      print: "Printen",
+    },
     title: 'MakerWorld',
     description: 'Plak een MakerWorld-model-URL om het rechtstreeks vanuit Bambuddy te importeren en af te drukken — zonder naar de Bambu Handy-app te gaan.',
     pasteUrlHeader: 'Importeren vanuit MakerWorld',
