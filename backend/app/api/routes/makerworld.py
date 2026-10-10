@@ -545,6 +545,21 @@ async def start_print_flow(
     )
     if instance_id is None:
         raise HTTPException(status_code=404, detail="This model has no downloadable print profile")
+    if not matched:
+        # The creator's settings are only valid on the printer they were made
+        # for; slicing them for another model would produce G-code for the
+        # wrong machine. Until the fallback to the user's own presets exists,
+        # refuse and let the user pick the presets in the Slice dialog.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "no_matching_profile",
+                "message": (
+                    f"This MakerWorld profile wasn't made for {printer.model or 'this printer'}. "
+                    "Use Save & slice on the MakerWorld page and pick your printer's presets."
+                ),
+            },
+        )
 
     imported = await import_instance(
         MakerWorldImportRequest(

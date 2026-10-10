@@ -263,15 +263,27 @@ class TestPrintRoute:
         assert job["result"]["plates"] == [{"plate": 1, "ams_mapping": [0, 1]}]
 
     @pytest.mark.asyncio
-    async def test_profile_id_fragment_selects_that_profile(self, async_client, printer, flow):
+    async def test_link_to_a_plate_for_another_printer_is_refused(self, async_client, printer, flow):
         svc, _ = flow
         resp = await async_client.post(
             "/api/v1/makerworld/print",
             json={"url": f"https://makerworld.com/en/models/40146-benchy?from=search#profileId-{A1_MINI}"},
         )
+        # An A1 mini plate on an A1: never sliced with settings for another
+        # printer, and nothing is downloaded.
+        assert resp.status_code == 409, resp.text
+        assert resp.json()["detail"]["code"] == "no_matching_profile"
+        svc.get_download.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_link_to_a_plate_for_this_printer_is_used(self, async_client, printer, flow):
+        svc, _ = flow
+        resp = await async_client.post(
+            "/api/v1/makerworld/print",
+            json={"url": f"https://makerworld.com/en/models/40146-benchy?from=search#profileId-{A1}"},
+        )
         assert resp.status_code == 202, resp.text
-        assert resp.json()["matched_profile"] is False  # A1 mini plate on an A1
-        assert svc.get_download.call_args.args[0].sub_id == str(A1_MINI)
+        assert svc.get_download.call_args.args[0].sub_id == str(A1)
         await self._finish(async_client, resp.json()["job_id"])
 
     @pytest.mark.asyncio
