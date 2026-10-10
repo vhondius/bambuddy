@@ -237,6 +237,13 @@ export default {
 
   // Yazıcılar sayfası
   printers: {
+    gotoProfile: {
+      title: "Varsayılan baskı profili",
+      help: "Tek dokunuşla MakerWorld baskısında kullanılır. Bu yazıcı için hazırlanmış bir MakerWorld profili oluşturucunun değişikliklerini ekler.",
+      printer: "Yazıcı ön ayarı",
+      process: "İşlem ön ayarı",
+      loading: "Ön ayarlar yükleniyor…",
+    },
     title: 'Yazıcılar',
     addPrinter: 'Yazıcı Ekle',
     addPreflight: {
@@ -7462,6 +7469,18 @@ export default {
   makerworld: {
     notDownloadable: "Eski plaka: MakerWorld bunu yalnızca kendi web sitesinde indirmeye sunuyor.",
     printFlow: {
+      gotoMissing: "Bu yazıcının henüz varsayılan baskı profili yok. Önce yazıcı ayarlarından birini seçin.",
+      slicerUnreachable: "Dilimleyiciye ulaşılamıyor, bu yüzden hiçbir şey indirilmedi.",
+      openPrinterSettings: "Yazıcı ayarlarını aç",
+      openSliceDialog: "Dilimleme penceresini aç",
+      openPrintDialog: "Baskı penceresini aç",
+      creatorSettingsNotUsed: "Bu MakerWorld profili yazıcınız için hazırlanmamış: varsayılan profilinizle, oluşturucunun ayarları olmadan dilimlendi ve tablanıza göre yerleştirildi.",
+      blocks: {
+        too_many_filaments: "Bu plaka AMS'de yüklü olandan fazla filament gerektiriyor. Yuvaları baskı penceresinde seçin.",
+        filament_unmatched: "Bu plakadaki bir filamentin eşleşen AMS yuvası yok. Yuvaları baskı penceresinde seçin.",
+        filament_ambiguous: "Bir filament yalnızca aynı malzemenin başka renkteki AMS yuvasıyla eşleşiyor. Yuvaları baskı penceresinde kontrol edin.",
+        bed_overflow: "Model yazıcının tablasına sığmıyor. Ölçeklenmeyecek; dilimleme penceresinde düzenleyin.",
+      },
       title: "MakerWorld'den yazdır",
       preparing: "Model indiriliyor…",
       slicing: "Dilimleniyor…",

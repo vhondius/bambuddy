@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Profil d'impression par défaut",
+      help: "Utilisé pour l'impression MakerWorld en un geste. Un profil MakerWorld conçu pour cette imprimante y ajoute les modifications du créateur.",
+      printer: "Préréglage d'imprimante",
+      process: "Préréglage de processus",
+      loading: "Chargement des préréglages…",
+    },
     addPreflight: {
       checking: 'Vérification de la connexion...',
       warning: 'Certaines vérifications de connexion ont échoué. Cette imprimante pourrait apparaître hors ligne. Examinez les vérifications ci-dessous, corrigez ce que vous pouvez, ou enregistrez quand même.',
@@ -7512,6 +7519,18 @@ export default {
   makerworld: {
     notDownloadable: "Ancien plateau : MakerWorld ne le propose au téléchargement que sur son propre site.",
     printFlow: {
+      gotoMissing: "Cette imprimante n'a pas encore de profil d'impression par défaut. Définissez-en un dans ses réglages.",
+      slicerUnreachable: "Le slicer est injoignable, rien n'a donc été téléchargé.",
+      openPrinterSettings: "Ouvrir les réglages de l'imprimante",
+      openSliceDialog: "Ouvrir la fenêtre de découpage",
+      openPrintDialog: "Ouvrir la fenêtre d'impression",
+      creatorSettingsNotUsed: "Ce profil MakerWorld n'a pas été conçu pour votre imprimante : découpé avec votre profil par défaut, sans les réglages du créateur, et disposé pour votre plateau.",
+      blocks: {
+        too_many_filaments: "Ce plateau nécessite plus de filaments que ceux chargés dans l'AMS. Choisissez les emplacements dans la fenêtre d'impression.",
+        filament_unmatched: "Un filament de ce plateau n'a aucun emplacement AMS correspondant. Choisissez les emplacements dans la fenêtre d'impression.",
+        filament_ambiguous: "Un filament ne correspond qu'à un emplacement AMS du même matériau dans une autre couleur. Vérifiez les emplacements dans la fenêtre d'impression.",
+        bed_overflow: "Le modèle ne tient pas sur le plateau de votre imprimante. Il ne sera pas mis à l'échelle ; ajustez-le dans la fenêtre de découpage.",
+      },
       title: "Imprimer depuis MakerWorld",
       preparing: "Téléchargement du modèle…",
       slicing: "Découpage…",

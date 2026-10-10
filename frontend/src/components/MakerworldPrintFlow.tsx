@@ -13,6 +13,8 @@ import { buildLoadedFilaments } from '../hooks/useFilamentMapping';
 import { useToast } from '../contexts/ToastContext';
 import { formatDuration } from '../utils/date';
 import { Button } from './Button';
+import { PrintModal } from './PrintModal';
+import { SliceModal, type SliceSource } from './SliceModal';
 
 interface PrinterChoice {
   id: number;
@@ -25,7 +27,15 @@ type Step =
   | { kind: 'pickPrinter'; printers: PrinterChoice[] }
   | { kind: 'slicing'; jobId: number; job: SliceJobState | null }
   | { kind: 'preview'; result: MakerworldPrintResult }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; handover?: Handover };
+
+/** Where the flow hands over instead of guessing (requirement D): the
+ *  printer settings (no go-to profile), the Slice dialog (unsliced model),
+ *  or the Print dialog (sliced, but the AMS match needs a human). */
+type Handover =
+  | { to: 'printerSettings' }
+  | { to: 'slice'; source: SliceSource }
+  | { to: 'print'; libraryFileId: number; name: string; printerId: number };
 
 interface MakerworldPrintFlowProps {
   /** MakerWorld model URL, including any #profileId-… fragment. */
@@ -47,9 +57,19 @@ interface MakerworldPrintFlowProps {
 export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobStarted, onClose }: MakerworldPrintFlowProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>(
     resumeJobId ? { kind: 'slicing', jobId: resumeJobId, job: null } : { kind: 'starting' },
   );
+  const [openDialog, setOpenDialog] = useState<Handover | null>(null);
+  const handOver = (h: Handover) => {
+    if (h.to === 'printerSettings') {
+      onClose();
+      navigate('/printers');
+    } else {
+      setOpenDialog(h);
+    }
+  };
 
   const start = useCallback(
     async (chosenPrinterId?: number | null) => {
@@ -61,12 +81,26 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
       } catch (err) {
         if (err instanceof ApiError && err.code === 'printer_required') {
           setStep({ kind: 'pickPrinter', printers: (err.detail?.printers as PrinterChoice[]) ?? [] });
+        } else if (err instanceof ApiError && err.code === 'goto_profile_missing') {
+          setStep({ kind: 'error', message: t('makerworld.printFlow.gotoMissing'), handover: { to: 'printerSettings' } });
+        } else if (err instanceof ApiError && err.code === 'slicer_unreachable') {
+          setStep({ kind: 'error', message: `${t('makerworld.printFlow.slicerUnreachable')}\n${err.message}` });
+        } else if (err instanceof ApiError && err.code === 'no_filament_preset') {
+          const id = Number(err.detail?.source_library_file_id);
+          setStep({
+            kind: 'error',
+            message: err.message,
+            handover: {
+              to: 'slice',
+              source: { kind: 'libraryFile', id, filename: String(err.detail?.source_filename ?? '') },
+            },
+          });
         } else {
           setStep({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
         }
       }
     },
-    [url, onJobStarted],
+    [url, onJobStarted, t],
   );
 
   useEffect(() => {
@@ -83,7 +117,23 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
       setStep((prev) => {
         if (prev.kind !== 'slicing') return prev;
         if (job.status === 'completed') {
-          return { kind: 'preview', result: job.result as MakerworldPrintResult };
+          const result = job.result as MakerworldPrintResult;
+          if (result.block === 'bed_overflow') {
+            // Never scaled: the unsliced model goes to the Slice dialog.
+            return {
+              kind: 'error',
+              message: t('makerworld.printFlow.blocks.bed_overflow'),
+              handover: {
+                to: 'slice',
+                source: {
+                  kind: 'libraryFile',
+                  id: result.source_library_file_id,
+                  filename: result.source_filename ?? '',
+                },
+              },
+            };
+          }
+          return { kind: 'preview', result };
         }
         if (job.status === 'failed') {
           return { kind: 'error', message: job.error_detail ?? t('makerworld.printFlow.sliceFailed') };
@@ -148,14 +198,20 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
           {step.kind === 'error' && (
             <div className="space-y-4">
               <p className="text-red-400 text-sm whitespace-pre-line break-words">{step.message}</p>
-              <Button variant="secondary" onClick={() => start(printerId)}>
-                {t('makerworld.printFlow.retry')}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {step.handover && (
+                  <Button onClick={() => handOver(step.handover!)}>{handoverLabel(step.handover, t)}</Button>
+                )}
+                <Button variant="secondary" onClick={() => start(printerId)}>
+                  {t('makerworld.printFlow.retry')}
+                </Button>
+              </div>
             </div>
           )}
           {step.kind === 'preview' && (
             <Preview
               result={step.result}
+              onHandOver={handOver}
               onDone={() => {
                 showToast(t('makerworld.printFlow.queued'), 'success');
                 onClose();
@@ -164,8 +220,25 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
           )}
         </div>
       </div>
+      {openDialog?.to === 'slice' && <SliceModal source={openDialog.source} onClose={onClose} />}
+      {openDialog?.to === 'print' && (
+        <PrintModal
+          mode="create"
+          libraryFileId={openDialog.libraryFileId}
+          archiveName={openDialog.name}
+          initialSelectedPrinterIds={[openDialog.printerId]}
+          onClose={onClose}
+          onSuccess={onClose}
+        />
+      )}
     </div>
   );
+}
+
+function handoverLabel(h: Handover, t: (key: string) => string): string {
+  if (h.to === 'printerSettings') return t('makerworld.printFlow.openPrinterSettings');
+  if (h.to === 'slice') return t('makerworld.printFlow.openSliceDialog');
+  return t('makerworld.printFlow.openPrintDialog');
 }
 
 function Busy({ label, percent }: { label: string; percent?: number }) {
@@ -180,7 +253,15 @@ function Busy({ label, percent }: { label: string; percent?: number }) {
   );
 }
 
-function Preview({ result, onDone }: { result: MakerworldPrintResult; onDone: () => void }) {
+function Preview({
+  result,
+  onDone,
+  onHandOver,
+}: {
+  result: MakerworldPrintResult;
+  onDone: () => void;
+  onHandOver: (h: Handover) => void;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [plateIdx, setPlateIdx] = useState(0);
@@ -218,8 +299,15 @@ function Preview({ result, onDone }: { result: MakerworldPrintResult; onDone: ()
     }
   };
 
+  const block = flowPlate?.block ?? null;
+
   return (
     <div className="space-y-4">
+      {result.notice === 'creator_settings_not_used' && (
+        <p className="text-sm rounded-lg p-3 bg-amber-500/10 text-amber-300">
+          {t('makerworld.printFlow.creatorSettingsNotUsed')}
+        </p>
+      )}
       {result.plates.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {result.plates.map((p, i) => (
@@ -264,6 +352,7 @@ function Preview({ result, onDone }: { result: MakerworldPrintResult; onDone: ()
         </ul>
       </div>
       {error && <p className="text-red-400 text-sm break-words">{error}</p>}
+      {block && <p className="text-sm rounded-lg p-3 bg-red-500/10 text-red-300">{t(`makerworld.printFlow.blocks.${block}`)}</p>}
       <div className="flex flex-wrap gap-2 pt-2">
         <Button
           variant="secondary"
@@ -272,9 +361,25 @@ function Preview({ result, onDone }: { result: MakerworldPrintResult; onDone: ()
         >
           {t('makerworld.printFlow.gcodePreview')}
         </Button>
-        <Button className="flex-1 min-w-[8rem]" onClick={queue} disabled={queueing}>
-          {queueing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('makerworld.printFlow.print')}
-        </Button>
+        {block ? (
+          <Button
+            className="flex-1 min-w-[8rem]"
+            onClick={() =>
+              onHandOver({
+                to: 'print',
+                libraryFileId: result.library_file_id,
+                name: result.name,
+                printerId: result.printer_id,
+              })
+            }
+          >
+            {t('makerworld.printFlow.openPrintDialog')}
+          </Button>
+        ) : (
+          <Button className="flex-1 min-w-[8rem]" onClick={queue} disabled={queueing}>
+            {queueing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('makerworld.printFlow.print')}
+          </Button>
+        )}
       </div>
     </div>
   );

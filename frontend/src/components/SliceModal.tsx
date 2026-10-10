@@ -1327,7 +1327,7 @@ const BED_TYPE_OPTIONS: { value: string; labelKey: string; fallback: string }[] 
   { value: 'Smooth PEI Plate', labelKey: 'slice.bedType.smoothPEI', fallback: 'Smooth PEI Plate' },
 ];
 
-function BedTypeDropdown({
+export function BedTypeDropdown({
   value,
   onChange,
   disabled,
@@ -1385,7 +1385,7 @@ interface PresetDropdownProps {
   compatIndex?: PrinterCompatibilityIndex;
 }
 
-function PresetDropdown({
+export function PresetDropdown({
   label,
   slot,
   data,

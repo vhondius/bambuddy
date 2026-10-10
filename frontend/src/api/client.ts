@@ -437,6 +437,11 @@ export interface Printer {
   external_camera_snapshot_url: string | null;  // optional single-frame override (#1177)
   camera_rotation: number;  // 0, 90, 180, 270 degrees
   plate_detection_enabled: boolean;  // Check plate before print
+  installed_bed_type?: string | null;
+  goto_printer_preset_source?: PresetRef['source'] | null;
+  goto_printer_preset_id?: string | null;
+  goto_process_preset_source?: PresetRef['source'] | null;
+  goto_process_preset_id?: string | null;
   plate_detection_roi?: PlateDetectionROI;  // ROI for plate detection
   created_at: string;
   updated_at: string;
@@ -743,6 +748,12 @@ export interface PrinterCreate {
   external_camera_snapshot_url?: string | null;
   camera_rotation?: number;
   plate_detection_enabled?: boolean;
+  // MakerWorld one-tap print: installed build plate + go-to presets.
+  installed_bed_type?: string | null;
+  goto_printer_preset_source?: PresetRef['source'] | null;
+  goto_printer_preset_id?: string | null;
+  goto_process_preset_source?: PresetRef['source'] | null;
+  goto_process_preset_id?: string | null;
   plate_detection_roi?: PlateDetectionROI;
 }
 
@@ -2107,13 +2118,19 @@ export interface MakerworldPrintStart {
   matched_profile: boolean;
 }
 
+/** Why a plate (or the whole flow) hands over to an existing dialog. */
+export type MakerworldPrintBlock =
+  | 'too_many_filaments'
+  | 'filament_unmatched'
+  | 'filament_ambiguous'
+  | 'bed_overflow';
+
 /** One sliced plate in a MakerWorld print-flow result: the AMS mapping the
- *  queue would use plus the plate's filament requirements (slot_id, type,
- *  color, used_grams). */
+ *  queue would use, or why it must go to the Print dialog instead. */
 export interface MakerworldPrintPlate {
   plate: number;
   ams_mapping: number[] | null;
-  requirements: Array<{ slot_id: number; type: string; color: string; used_grams?: number }>;
+  block: MakerworldPrintBlock | null;
 }
 
 /** `result` of a completed MakerWorld print-flow slice job. */
@@ -2121,6 +2138,13 @@ export interface MakerworldPrintResult extends SliceResponse {
   printer_id: number;
   source_library_file_id: number;
   profile_id: number;
+  /** Set when the MakerWorld profile wasn't made for this printer: sliced
+   *  with the go-to profile only, arranged for this bed. */
+  notice?: 'creator_settings_not_used' | null;
+  /** Whole-flow hand-over (nothing sliced): the model doesn't fit the bed. */
+  block?: 'bed_overflow';
+  block_detail?: string;
+  source_filename?: string;
   plates: MakerworldPrintPlate[];
 }
 

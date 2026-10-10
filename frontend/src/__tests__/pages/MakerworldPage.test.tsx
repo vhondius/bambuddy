@@ -366,9 +366,13 @@ describe('MakerworldPage', () => {
 
 describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
   const MODEL = 'https://makerworld.com/en/models/1400373#profileId-298919564';
+  let printNotice: string | null = null;
+  let printBlock: string | null = null;
 
   afterEach(() => {
     window.history.replaceState(null, '', '/');
+    printNotice = null;
+    printBlock = null;
   });
 
   function usePrintFlowHandlers(printBodies: Array<Record<string, unknown>>) {
@@ -403,7 +407,8 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
             printer_id: 3,
             source_library_file_id: 7,
             profile_id: 298919564,
-            plates: [{ plate: 1, ams_mapping: [0] }],
+            notice: printNotice,
+            plates: [{ plate: 1, ams_mapping: [0], block: printBlock }],
           },
         }),
       ),
@@ -489,5 +494,43 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Office X1C/ }));
     await screen.findByRole('button', { name: 'Print' });
     expect(bodies.map((b) => b.printer_id)).toEqual([null, 3]);
+  });
+
+  it('says when the creator settings were not used', async () => {
+    printNotice = 'creator_settings_not_used';
+    usePrintFlowHandlers([]);
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    expect(await screen.findByText(/without the creator's settings/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument();
+  });
+
+  it('hands an ambiguous AMS match to the Print dialog instead of printing', async () => {
+    printBlock = 'filament_ambiguous';
+    usePrintFlowHandlers([]);
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    expect(await screen.findByRole('button', { name: 'Open Print dialog' })).toBeInTheDocument();
+    expect(screen.getByText(/same material in another colour/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument();
+  });
+
+  it('asks for a go-to print profile when the printer has none', async () => {
+    usePrintFlowHandlers([]);
+    server.use(
+      http.post('*/makerworld/print', () =>
+        HttpResponse.json(
+          { detail: { code: 'goto_profile_missing', printer_id: 3, message: 'Set a go-to print profile' } },
+          { status: 409 },
+        ),
+      ),
+    );
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    expect(await screen.findByRole('button', { name: 'Open printer settings' })).toBeInTheDocument();
+    expect(screen.getByText(/no go-to print profile yet/)).toBeInTheDocument();
   });
 });

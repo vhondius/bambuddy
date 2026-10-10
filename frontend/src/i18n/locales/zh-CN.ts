@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "默认打印配置",
+      help: "用于 MakerWorld 一键打印。为此打印机制作的 MakerWorld 配置会叠加作者的修改。",
+      printer: "打印机预设",
+      process: "工艺预设",
+      loading: "正在加载预设…",
+    },
     addPreflight: {
       checking: '正在检查连接...',
       warning: '部分连接检查未通过。此打印机可能显示为离线。请查看下方的检查项，尽量修复，或仍然保存。',
@@ -7509,6 +7516,18 @@ export default {
   makerworld: {
     notDownloadable: "旧版盘：MakerWorld 仅在其官网提供下载。",
     printFlow: {
+      gotoMissing: "此打印机还没有默认打印配置。请先在打印机设置中设置。",
+      slicerUnreachable: "无法连接切片器，因此未下载任何内容。",
+      openPrinterSettings: "打开打印机设置",
+      openSliceDialog: "打开切片窗口",
+      openPrintDialog: "打开打印窗口",
+      creatorSettingsNotUsed: "此 MakerWorld 配置并非为你的打印机制作：已使用你的默认配置切片，未使用作者的设置，并按你的热床重新排列。",
+      blocks: {
+        too_many_filaments: "此盘需要的耗材多于 AMS 中已装载的耗材。请在打印窗口中选择槽位。",
+        filament_unmatched: "此盘中有耗材没有匹配的 AMS 槽位。请在打印窗口中选择槽位。",
+        filament_ambiguous: "有耗材只与相同材料但颜色不同的 AMS 槽位匹配。请在打印窗口中检查槽位。",
+        bed_overflow: "模型超出打印机热床。不会缩放；请在切片窗口中调整。",
+      },
       title: "从 MakerWorld 打印",
       preparing: "正在下载模型…",
       slicing: "正在切片…",

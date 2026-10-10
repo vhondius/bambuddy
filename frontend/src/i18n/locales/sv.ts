@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Standardutskriftsprofil",
+      help: "Används för utskrift från MakerWorld med ett tryck. En MakerWorld-profil för den här skrivaren lägger till skaparens ändringar.",
+      printer: "Skrivarprofil",
+      process: "Processprofil",
+      loading: "Läser in profiler…",
+    },
     title: 'Skrivare',
     addPrinter: 'Lägg till skrivare',
     addPreflight: {
@@ -7574,6 +7581,18 @@ errors: {
   makerworld: {
     notDownloadable: "Äldre platta: MakerWorld erbjuder den bara för nedladdning på sin egen webbplats.",
     printFlow: {
+      gotoMissing: "Den här skrivaren har ingen standardutskriftsprofil än. Ange en i skrivarens inställningar först.",
+      slicerUnreachable: "Slicern går inte att nå, så inget laddades ner.",
+      openPrinterSettings: "Öppna skrivarinställningar",
+      openSliceDialog: "Öppna slice-dialogen",
+      openPrintDialog: "Öppna utskriftsdialogen",
+      creatorSettingsNotUsed: "Den här MakerWorld-profilen är inte gjord för din skrivare: slicad med din standardprofil, utan skaparens inställningar, och placerad för din byggplatta.",
+      blocks: {
+        too_many_filaments: "Den här plattan behöver fler filament än som är laddade i AMS. Välj platserna i utskriftsdialogen.",
+        filament_unmatched: "Ett filament på den här plattan saknar matchande AMS-plats. Välj platserna i utskriftsdialogen.",
+        filament_ambiguous: "Ett filament matchar bara en AMS-plats med samma material i en annan färg. Kontrollera platserna i utskriftsdialogen.",
+        bed_overflow: "Modellen får inte plats på skrivarens byggplatta. Den skalas inte; justera den i slice-dialogen.",
+      },
       title: "Skriv ut från MakerWorld",
       preparing: "Laddar ner modellen…",
       slicing: "Slicar…",

@@ -511,11 +511,22 @@ async def start_print_flow(
     from pathlib import Path
 
     from backend.app.api.routes.library import slice_and_persist
+    from backend.app.api.routes.slicer_presets import _fetch_bundled_presets, _resolve_slicer_api_url
     from backend.app.core.config import settings as app_settings
     from backend.app.core.database import async_session
-    from backend.app.services.makerworld_print import embedded_slice_request, plate_mappings, select_profile
+    from backend.app.services.makerworld_print import (
+        check_blocks,
+        goto_presets,
+        goto_slice_request,
+        is_bed_overflow,
+        pick_filament_presets,
+        plate_mappings,
+        select_profile,
+        system_printer_name,
+    )
     from backend.app.services.printer_manager import printer_manager
     from backend.app.services.slice_dispatch import http_exception_to_job_error, slice_dispatch
+    from backend.app.services.slicer_api import SlicerApiError, SlicerApiService
 
     provider = _provider_for_url(body.url)
     current_user = await _authorize_for_provider(provider, provider.import_permission, credentials, x_api_key)
@@ -524,7 +535,31 @@ async def start_print_flow(
     except ProviderError as exc:
         raise _map_service_error(exc) from exc
 
+    # Say so up front when the slicer is down, instead of after a download.
+    api_url = await _resolve_slicer_api_url(db)
+    try:
+        if not api_url:
+            raise SlicerApiError("no slicer sidecar URL configured")
+        async with SlicerApiService(base_url=api_url) as slicer:
+            await slicer.health()
+    except SlicerApiError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "slicer_unreachable", "message": f"The slicer isn't reachable: {exc}"},
+        ) from exc
+
     printer = await _pick_printer(db, body.printer_id)
+    presets = goto_presets(printer)
+    if presets is None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "goto_profile_missing",
+                "printer_id": printer.id,
+                "message": f"Set a go-to print profile for {printer.name} in its printer settings first.",
+            },
+        )
+    printer_ref, process_ref = presets
     status = printer_manager.get_status(printer.id)
     printer_nozzle: float | None = None
     try:
@@ -545,21 +580,6 @@ async def start_print_flow(
     )
     if instance_id is None:
         raise HTTPException(status_code=404, detail="This model has no downloadable print profile")
-    if not matched:
-        # The creator's settings are only valid on the printer they were made
-        # for; slicing them for another model would produce G-code for the
-        # wrong machine. Until the fallback to the user's own presets exists,
-        # refuse and let the user pick the presets in the Slice dialog.
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "code": "no_matching_profile",
-                "message": (
-                    f"This MakerWorld profile wasn't made for {printer.model or 'this printer'}. "
-                    "Use Save & slice on the MakerWorld page and pick your printer's presets."
-                ),
-            },
-        )
 
     imported = await import_instance(
         MakerWorldImportRequest(
@@ -572,9 +592,35 @@ async def start_print_flow(
     )
     profile_id = imported.profile_id
     source = await db.get(LibraryFile, imported.library_file_id)
-    src_path = Path(app_settings.base_dir) / source.file_path
-    model_bytes = src_path.read_bytes()
-    request = embedded_slice_request(model_bytes, plate=0)
+    file_nozzle = (source.file_metadata or {}).get("nozzle_diameter")
+    if matched and file_nozzle and printer_nozzle and abs(float(file_nozzle) - printer_nozzle) > 1e-3:
+        matched = False  # made for this model, but for another nozzle
+    model_bytes = (Path(app_settings.base_dir) / source.file_path).read_bytes()
+    try:
+        filaments = pick_filament_presets(
+            model_bytes,
+            (await _fetch_bundled_presets(db))["filament"],
+            system_printer_name(printer_ref, printer.model, printer_nozzle),
+        )
+    except ValueError as exc:
+        await db.commit()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "no_filament_preset",
+                "source_library_file_id": source.id,
+                "source_filename": source.filename,
+                "message": str(exc),
+            },
+        ) from exc
+    request = goto_slice_request(
+        model_bytes,
+        printer_ref,
+        process_ref,
+        filaments,
+        creator_settings=matched,
+        bed_type=printer.installed_bed_type,
+    )
 
     cloud_token_user = current_user or api_key_cloud_owner
     user_id = cloud_token_user.id if cloud_token_user else None
@@ -582,6 +628,7 @@ async def start_print_flow(
     folder_id = source.folder_id
     source_id = source.id
     model_filename = source.filename
+    notice = None if matched else "creator_settings_not_used"
 
     async def _run(job_id: int) -> dict:
         async with async_session() as task_db:
@@ -597,6 +644,16 @@ async def start_print_flow(
                     job_id=job_id,
                 )
             except HTTPException as exc:
+                if is_bed_overflow(str(exc.detail)):
+                    # Never scaled: hand the unsliced model to the Slice dialog.
+                    return {
+                        "block": "bed_overflow",
+                        "block_detail": str(exc.detail),
+                        "printer_id": printer_id,
+                        "source_library_file_id": source_id,
+                        "source_filename": model_filename,
+                        "plates": [],
+                    }
                 raise http_exception_to_job_error(exc) from exc
             out_file = await task_db.get(LibraryFile, sliced.library_file_id)
             plates = await plate_mappings(
@@ -607,7 +664,15 @@ async def start_print_flow(
             "printer_id": printer_id,
             "source_library_file_id": source_id,
             "profile_id": profile_id,
-            "plates": [{"plate": p["plate"], "ams_mapping": p["ams_mapping"]} for p in plates],
+            "notice": notice,
+            "plates": [
+                {
+                    "plate": p["plate"],
+                    "ams_mapping": p["ams_mapping"],
+                    "block": check_blocks(p["requirements"], p["loaded"], p["ams_mapping"]),
+                }
+                for p in plates
+            ],
         }
 
     # The job writes from its own session; don't leave this request's

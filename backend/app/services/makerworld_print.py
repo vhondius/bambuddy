@@ -1,8 +1,10 @@
 """One-tap "print from a MakerWorld link".
 
 ``POST /makerworld/print`` resolves a MakerWorld URL, imports the picked
-profile's 3MF through the regular import route, slices it as a background
-slice job and returns, per sliced plate, the AMS mapping the queue would use.
+profile's 3MF through the regular import route, slices it with the printer's
+go-to presets (plus the creator's changes when the profile was made for this
+printer) as a background slice job and returns, per sliced plate, the AMS
+mapping the queue would use and any reason to hand over to the Print dialog.
 The frontend shows that as a preview and dispatches through ``POST /queue/``
 on confirm. Everything here is glue: slicing is ``slice_and_persist``, AMS
 matching is the print scheduler's matcher, dispatch is the queue.
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -19,8 +22,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.schemas.slicer import PresetRef, SliceRequest
-from backend.app.utils.printer_models import normalize_printer_model, normalize_printer_model_id
-from backend.app.utils.threemf_tools import extract_embedded_presets_from_3mf
+from backend.app.utils.printer_models import PRINTER_MODEL_MAP, normalize_printer_model, normalize_printer_model_id
 
 
 def _norm_model(name: str | None) -> str:
@@ -99,32 +101,6 @@ def select_profile(
     return (candidates[0]["id"], False) if candidates else (None, False)
 
 
-def embedded_slice_request(model_bytes: bytes, **updates: Any) -> SliceRequest:
-    """A ``SliceRequest`` for the 3MF's own settings. The validator insists
-    on preset refs even on the embedded path (they go unused there), so name
-    the file's own presets as ``standard`` refs — that also makes the request
-    usable as-is for a with-profiles re-slice of the same printer/process."""
-    names: dict[str, str | None] = {"printer": None, "process": None}
-    filaments: list[str] = []
-    try:
-        with zipfile.ZipFile(io.BytesIO(model_bytes)) as zf:
-            names = extract_embedded_presets_from_3mf(zf)
-            if "Metadata/project_settings.config" in zf.namelist():
-                ids = json.loads(zf.read("Metadata/project_settings.config")).get("filament_settings_id")
-                filaments = [f for f in (ids if isinstance(ids, list) else [ids]) if isinstance(f, str) and f]
-    except (zipfile.BadZipFile, ValueError, OSError):
-        pass
-    return SliceRequest(
-        printer_preset=PresetRef(source="standard", id=names.get("printer") or "embedded"),
-        process_preset=PresetRef(source="standard", id=names.get("process") or "embedded"),
-        filament_presets=[PresetRef(source="standard", id=f) for f in filaments]
-        or [PresetRef(source="standard", id="embedded")],
-        use_embedded_settings=True,
-        export_3mf=True,
-        **updates,
-    )
-
-
 async def plate_mappings(db: AsyncSession, printer_id: int, library_file_id: int, file_path: Path) -> list[dict]:
     """Per sliced plate: the AMS mapping the queue would compute, plus the
     raw requirements and loaded trays (for the block checks)."""
@@ -145,3 +121,156 @@ async def plate_mappings(db: AsyncSession, printer_id: int, library_file_id: int
         mapping = await scheduler._compute_ams_mapping_for_printer(db, printer_id, item) if requirements else None
         out.append({"plate": plate, "ams_mapping": mapping, "requirements": requirements, "loaded": loaded})
     return out
+
+
+# --- Slicing with the printer's go-to presets -------------------------------
+
+
+def goto_presets(printer) -> tuple[PresetRef, PresetRef] | None:
+    """The printer's go-to printer + process presets, or None when unset."""
+    if not (
+        printer.goto_printer_preset_source
+        and printer.goto_printer_preset_id
+        and printer.goto_process_preset_source
+        and printer.goto_process_preset_id
+    ):
+        return None
+    return (
+        PresetRef(source=printer.goto_printer_preset_source, id=printer.goto_printer_preset_id),
+        PresetRef(source=printer.goto_process_preset_source, id=printer.goto_process_preset_id),
+    )
+
+
+def system_printer_name(printer_ref: PresetRef, printer_model: str | None, nozzle: float | None) -> str | None:
+    """The slicer's system name for the target printer ("Bambu Lab X2D 0.4
+    nozzle"), which standard filament presets list in compatible_printers. A
+    standard go-to preset *is* that name; a cloud/local one is a user preset
+    named freely, so derive it from the model and nozzle."""
+    if printer_ref.source == "standard":
+        return printer_ref.id
+    short = normalize_printer_model_id(printer_model)
+    full = next((k for k, v in PRINTER_MODEL_MAP.items() if v == short), None)
+    return f"{full} {nozzle or 0.4:.1f} nozzle" if full else None
+
+
+def _project_settings(model_bytes: bytes) -> dict:
+    try:
+        with zipfile.ZipFile(io.BytesIO(model_bytes)) as zf:
+            data = json.loads(zf.read("Metadata/project_settings.config"))
+    except (zipfile.BadZipFile, KeyError, ValueError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _as_list(value: Any) -> list:
+    return value if isinstance(value, list) else [value] if value else []
+
+
+def pick_filament_presets(model_bytes: bytes, standard_filaments: list, printer_name: str | None) -> list[PresetRef]:
+    """One standard filament preset per project filament slot, for the
+    target printer: the creator's own preset re-targeted ("Bambu PLA Basic
+    @BBL A1" → "Bambu PLA Basic @BBL X2D"), else a preset of the slot's
+    material, Bambu before Generic.
+
+    # ponytail: standard tier only and a name/material heuristic; port the
+    # SliceModal's scored picker (utils/slicePresetPicker.ts) if users need
+    # their own cloud filament presets picked here.
+    """
+    config = _project_settings(model_bytes)
+    names = [str(n) for n in _as_list(config.get("filament_settings_id"))]
+    types = [str(t) for t in _as_list(config.get("filament_type"))]
+    compatible = [
+        p
+        for p in standard_filaments
+        if p.compatible_printers is None or (printer_name and printer_name in p.compatible_printers)
+    ]
+    picked: list[PresetRef] = []
+    for i in range(max(len(names), len(types), 1)):
+        base = names[i].split(" @")[0] if i < len(names) else ""
+        ftype = (types[i] if i < len(types) else "PLA").upper()
+        same_name = [p for p in compatible if base and p.name.split(" @")[0] == base]
+        same_type = sorted(
+            (p for p in compatible if (p.filament_type or "").upper() == ftype),
+            key=lambda p: (not p.name.startswith("Bambu "), not p.name.startswith("Generic "), p.name),
+        )
+        choice = (same_name or same_type or [None])[0]
+        if choice is None:
+            raise ValueError(f"No {ftype} filament preset for {printer_name or 'this printer'} (slot {i + 1})")
+        picked.append(PresetRef(source="standard", id=choice.id))
+    return picked
+
+
+def goto_slice_request(
+    model_bytes: bytes,
+    printer_ref: PresetRef,
+    process_ref: PresetRef,
+    filaments: list[PresetRef],
+    *,
+    creator_settings: bool,
+    bed_type: str | None,
+) -> SliceRequest:
+    """Slice with the go-to presets. With ``creator_settings`` (the MakerWorld
+    profile was made for this printer) every process setting the creator
+    changed is carried on top; without, none are, and the slicer arranges the
+    objects for this bed — the layout was made for another one."""
+    from backend.app.services.design_settings import extract_design_process_overrides
+
+    colours = [
+        c if isinstance(c, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?", c) else ""
+        for c in _as_list(_project_settings(model_bytes).get("filament_colour"))
+    ]
+    return SliceRequest(
+        printer_preset=printer_ref,
+        process_preset=process_ref,
+        filament_presets=filaments,
+        filament_colours=colours[: len(filaments)],
+        design_overrides=[o.key for o in extract_design_process_overrides(model_bytes)] if creator_settings else [],
+        auto_arrange=not creator_settings,
+        bed_type=bed_type,
+        plate=0,
+        export_3mf=True,
+    )
+
+
+# --- Hand-over checks ---------------------------------------------------------
+
+# ponytail: matched on the slicer's error text (OrcaSlicer / Bambu Studio CLI
+# messages); add a bounding-box pre-check if a slicer words it differently.
+_BED_OVERFLOW = re.compile(
+    r"outside|out of (the )?(plate|bed)|partly inside|exceeds? the (plate|bed)|boundary|not fit|arrange", re.I
+)
+
+
+def is_bed_overflow(detail: str) -> bool:
+    return bool(_BED_OVERFLOW.search(detail or ""))
+
+
+def check_blocks(requirements: list[dict], loaded: list[dict], mapping: list[int] | None) -> str | None:
+    """Why this plate must go to the Print dialog instead, or None.
+
+    ``too_many_filaments``: the plate needs more filaments than are loaded.
+    ``filament_unmatched``: a filament has no AMS slot.
+    ``filament_ambiguous``: a slot only matches on material — the colour
+    differs, so the matcher would be guessing.
+    """
+    from backend.app.services.print_scheduler import scheduler
+
+    if not requirements:
+        return None
+    if len(requirements) > len(loaded):
+        return "too_many_filaments"
+    trays = {t.get("global_tray_id"): t for t in loaded}
+    for req in requirements:
+        slot = req.get("slot_id") or 0
+        tray_id = mapping[slot - 1] if mapping and 0 < slot <= len(mapping) else -1
+        tray = trays.get(tray_id)
+        if tray is None:
+            return "filament_unmatched"
+        # Colour, not the filament id: tray_info_idx names a product line
+        # (GFA00 is every Bambu PLA Basic), so black and white share one.
+        same_colour = scheduler._normalize_color_for_compare(req.get("color")) == (
+            scheduler._normalize_color_for_compare(tray.get("color"))
+        ) or scheduler._colors_are_similar(req.get("color"), tray.get("color"))
+        if not same_colour:
+            return "filament_ambiguous"
+    return None

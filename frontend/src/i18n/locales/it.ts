@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Profilo di stampa predefinito",
+      help: "Usato per la stampa MakerWorld con un tocco. Un profilo MakerWorld creato per questa stampante aggiunge le modifiche dell'autore.",
+      printer: "Preset stampante",
+      process: "Preset processo",
+      loading: "Caricamento preset…",
+    },
     addPreflight: {
       checking: 'Verifica della connessione...',
       warning: 'Alcuni controlli di connessione non sono riusciti. Questa stampante potrebbe risultare offline. Controlla le verifiche qui sotto, risolvi ciò che puoi oppure salva comunque.',
@@ -7511,6 +7518,18 @@ export default {
   makerworld: {
     notDownloadable: "Piatto datato: MakerWorld lo rende scaricabile solo dal proprio sito web.",
     printFlow: {
+      gotoMissing: "Questa stampante non ha ancora un profilo di stampa predefinito. Impostane uno nelle impostazioni della stampante.",
+      slicerUnreachable: "Lo slicer non è raggiungibile, quindi non è stato scaricato nulla.",
+      openPrinterSettings: "Apri impostazioni stampante",
+      openSliceDialog: "Apri finestra di slicing",
+      openPrintDialog: "Apri finestra di stampa",
+      creatorSettingsNotUsed: "Questo profilo MakerWorld non è stato creato per la tua stampante: elaborato con il tuo profilo predefinito, senza le impostazioni dell'autore e disposto per il tuo piano.",
+      blocks: {
+        too_many_filaments: "Questo piatto richiede più filamenti di quelli caricati nell'AMS. Scegli gli slot nella finestra di stampa.",
+        filament_unmatched: "Un filamento di questo piatto non ha uno slot AMS corrispondente. Scegli gli slot nella finestra di stampa.",
+        filament_ambiguous: "Un filamento corrisponde solo a uno slot AMS dello stesso materiale in un altro colore. Controlla gli slot nella finestra di stampa.",
+        bed_overflow: "Il modello non entra nel piano della stampante. Non verrà ridimensionato; modificalo nella finestra di slicing.",
+      },
       title: "Stampa da MakerWorld",
       preparing: "Download del modello…",
       slicing: "Slicing in corso…",

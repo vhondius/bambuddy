@@ -1,8 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.app.utils.printer_models import supports_nozzle_flow_type
+
+PresetSource = Literal["orca_cloud", "cloud", "local", "standard"]
 
 
 class PrinterBase(BaseModel):
@@ -76,6 +79,11 @@ class PrinterUpdate(BaseModel):
     external_camera_snapshot_url: str | None = None  # #1177
     camera_rotation: int | None = None  # 0, 90, 180, 270 degrees
     plate_detection_enabled: bool | None = None
+    installed_bed_type: str | None = Field(default=None, max_length=64)
+    goto_printer_preset_source: PresetSource | None = None
+    goto_printer_preset_id: str | None = Field(default=None, max_length=200)
+    goto_process_preset_source: PresetSource | None = None
+    goto_process_preset_id: str | None = Field(default=None, max_length=200)
     plate_detection_roi: PlateDetectionROI | None = None
 
 
@@ -96,6 +104,11 @@ class PrinterResponse(PrinterBase):
     camera_rotation: int = 0  # 0, 90, 180, 270 degrees
     plate_detection_enabled: bool = False
     plate_detection_roi: PlateDetectionROI | None = None
+    installed_bed_type: str | None = None
+    goto_printer_preset_source: str | None = None
+    goto_printer_preset_id: str | None = None
+    goto_process_preset_source: str | None = None
+    goto_process_preset_id: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -123,6 +136,11 @@ class PrinterResponse(PrinterBase):
             "supports_nozzle_flow_type": supports_nozzle_flow_type(printer.model),
             "print_hours_offset": printer.print_hours_offset,
             "plate_detection_enabled": printer.plate_detection_enabled,
+            "installed_bed_type": printer.installed_bed_type,
+            "goto_printer_preset_source": printer.goto_printer_preset_source,
+            "goto_printer_preset_id": printer.goto_printer_preset_id,
+            "goto_process_preset_source": printer.goto_process_preset_source,
+            "goto_process_preset_id": printer.goto_process_preset_id,
             "created_at": printer.created_at,
             "updated_at": printer.updated_at,
         }

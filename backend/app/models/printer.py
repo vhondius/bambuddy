@@ -46,6 +46,14 @@ class Printer(Base):
     # Queue: True after a print finishes/fails, until user acknowledges the plate is cleared.
     # Persisted so the gate survives crashes and power cycles (issue #961).
     awaiting_plate_clear: Mapped[bool] = mapped_column(Boolean, default=False)
+    # MakerWorld one-tap print: the build plate actually installed (the
+    # printer doesn't report it) and the go-to slicer presets the flow slices
+    # with, as PresetRef source + id pairs (see schemas/slicer.PresetRef).
+    installed_bed_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    goto_printer_preset_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    goto_printer_preset_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    goto_process_preset_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    goto_process_preset_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 

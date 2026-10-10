@@ -167,6 +167,7 @@ import { formatDateOnly, formatDateTime, formatETA, formatDuration, formatDurati
 import type { Printer, PrinterCreate, PrinterStatus, AMSUnit, DiscoveredPrinter, FirmwareUpdateInfo, FirmwareUploadStatus, LinkedSpoolInfo, SpoolAssignment, HMSError, InventorySpool, SmartPlug, PrinterDiagnosticResult } from '../api/client';
 import { Card, CardContent } from '../components/Card';
 import { Button } from '../components/Button';
+import { GotoPrintProfileFields, type GotoPrintProfile } from '../components/GotoPrintProfileFields';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { BulkPrinterToolbar, type PrinterState } from '../components/BulkPrinterToolbar';
 import { FileManagerModal } from '../components/FileManagerModal';
@@ -8453,6 +8454,17 @@ function EditPrinterModal({
     auto_archive: printer.auto_archive,
     is_active: printer.is_active,
   });
+  const [gotoProfile, setGotoProfile] = useState<GotoPrintProfile>({
+    printer:
+      printer.goto_printer_preset_source && printer.goto_printer_preset_id
+        ? { source: printer.goto_printer_preset_source, id: printer.goto_printer_preset_id }
+        : null,
+    process:
+      printer.goto_process_preset_source && printer.goto_process_preset_id
+        ? { source: printer.goto_process_preset_source, id: printer.goto_process_preset_id }
+        : null,
+    bedType: printer.installed_bed_type ?? null,
+  });
 
   // Setup-time pre-flight — same warn-on-save as the Add-Printer dialog, so an
   // edit that breaks connectivity (e.g. a mistyped IP) is caught before save.
@@ -8486,6 +8498,11 @@ function EditPrinterModal({
       location: form.location || undefined,
       auto_archive: form.auto_archive,
       is_active: form.is_active,
+      installed_bed_type: gotoProfile.bedType,
+      goto_printer_preset_source: gotoProfile.printer?.source ?? null,
+      goto_printer_preset_id: gotoProfile.printer?.id ?? null,
+      goto_process_preset_source: gotoProfile.process?.source ?? null,
+      goto_process_preset_id: gotoProfile.process?.id ?? null,
     };
     // Only include access_code if it was changed
     if (form.access_code) {
@@ -8614,6 +8631,7 @@ function EditPrinterModal({
               />
               <p className="text-xs text-bambu-gray mt-1">{t('printers.locationHelp')}</p>
             </div>
+            <GotoPrintProfileFields value={gotoProfile} onChange={setGotoProfile} />
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

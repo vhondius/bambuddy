@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Standard-Druckprofil",
+      help: "Wird für den MakerWorld-Druck mit einem Tipp verwendet. Ein MakerWorld-Profil für diesen Drucker fügt die Änderungen des Erstellers hinzu.",
+      printer: "Drucker-Preset",
+      process: "Prozess-Preset",
+      loading: "Presets werden geladen…",
+    },
     addPreflight: {
       checking: 'Verbindung wird geprüft...',
       warning: 'Einige Verbindungsprüfungen sind fehlgeschlagen. Dieser Drucker wird möglicherweise als offline angezeigt. Prüfe die Punkte unten, behebe was möglich ist, oder speichere trotzdem.',
@@ -7525,6 +7532,18 @@ export default {
   makerworld: {
     notDownloadable: "Ältere Platte: MakerWorld bietet sie nur auf der eigenen Website zum Download an.",
     printFlow: {
+      gotoMissing: "Dieser Drucker hat noch kein Standard-Druckprofil. Lege zuerst eines in den Druckereinstellungen fest.",
+      slicerUnreachable: "Der Slicer ist nicht erreichbar, daher wurde nichts heruntergeladen.",
+      openPrinterSettings: "Druckereinstellungen öffnen",
+      openSliceDialog: "Slice-Dialog öffnen",
+      openPrintDialog: "Druckdialog öffnen",
+      creatorSettingsNotUsed: "Dieses MakerWorld-Profil ist nicht für deinen Drucker gemacht: mit deinem Standard-Druckprofil gesliced, ohne die Einstellungen des Erstellers und für dein Druckbett angeordnet.",
+      blocks: {
+        too_many_filaments: "Diese Platte braucht mehr Filamente, als im AMS geladen sind. Wähle die Slots im Druckdialog.",
+        filament_unmatched: "Für ein Filament dieser Platte gibt es keinen passenden AMS-Slot. Wähle die Slots im Druckdialog.",
+        filament_ambiguous: "Ein Filament passt nur zu einem AMS-Slot mit gleichem Material in anderer Farbe. Prüfe die Slots im Druckdialog.",
+        bed_overflow: "Das Modell passt nicht auf das Druckbett. Es wird nicht skaliert; passe es im Slice-Dialog an.",
+      },
       title: "Von MakerWorld drucken",
       preparing: "Modell wird heruntergeladen…",
       slicing: "Wird gesliced…",

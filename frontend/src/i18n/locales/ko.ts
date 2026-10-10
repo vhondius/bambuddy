@@ -231,6 +231,13 @@ export default {
     deleteTransaction: '거래 삭제',
   },
   printers: {
+    gotoProfile: {
+      title: "기본 출력 프로필",
+      help: "MakerWorld 원탭 출력에 사용됩니다. 이 프린터용 MakerWorld 프로필이면 제작자의 변경 사항이 추가됩니다.",
+      printer: "프린터 프리셋",
+      process: "프로세스 프리셋",
+      loading: "프리셋 불러오는 중…",
+    },
     title: '프린터',
     addPrinter: '프린터 추가',
     editPrinter: '프린터 편집',
@@ -6966,6 +6973,18 @@ export default {
   makerworld: {
     notDownloadable: "이전 플레이트: MakerWorld 웹사이트에서만 다운로드할 수 있습니다.",
     printFlow: {
+      gotoMissing: "이 프린터에는 아직 기본 출력 프로필이 없습니다. 먼저 프린터 설정에서 지정하세요.",
+      slicerUnreachable: "슬라이서에 연결할 수 없어 아무것도 다운로드하지 않았습니다.",
+      openPrinterSettings: "프린터 설정 열기",
+      openSliceDialog: "슬라이스 창 열기",
+      openPrintDialog: "출력 창 열기",
+      creatorSettingsNotUsed: "이 MakerWorld 프로필은 사용 중인 프린터용이 아닙니다. 기본 프로필로, 제작자 설정 없이 슬라이스하고 베드에 맞게 배치했습니다.",
+      blocks: {
+        too_many_filaments: "이 플레이트에는 AMS에 장착된 것보다 많은 필라멘트가 필요합니다. 출력 창에서 슬롯을 선택하세요.",
+        filament_unmatched: "이 플레이트의 필라멘트와 일치하는 AMS 슬롯이 없습니다. 출력 창에서 슬롯을 선택하세요.",
+        filament_ambiguous: "필라멘트가 같은 재질의 다른 색상 AMS 슬롯과만 일치합니다. 출력 창에서 슬롯을 확인하세요.",
+        bed_overflow: "모델이 프린터 베드에 맞지 않습니다. 크기를 조정하지 않으니 슬라이스 창에서 수정하세요.",
+      },
       title: "MakerWorld에서 출력",
       preparing: "모델 다운로드 중…",
       slicing: "슬라이싱 중…",

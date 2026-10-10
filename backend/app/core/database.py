@@ -3513,6 +3513,15 @@ async def run_migrations(conn):
 
     # Migration: Add awaiting_plate_clear column to printers (#961)
     await _safe_execute(conn, "ALTER TABLE printers ADD COLUMN awaiting_plate_clear BOOLEAN DEFAULT FALSE NOT NULL")
+    # MakerWorld one-tap print: installed build plate + go-to slicer presets.
+    await _safe_execute(conn, "ALTER TABLE printers ADD COLUMN installed_bed_type VARCHAR(64)")
+    for _col, _len in (
+        ("goto_printer_preset_source", 20),
+        ("goto_printer_preset_id", 200),
+        ("goto_process_preset_source", 20),
+        ("goto_process_preset_id", 200),
+    ):
+        await _safe_execute(conn, f"ALTER TABLE printers ADD COLUMN {_col} VARCHAR({_len})")
 
     # Migration: Add REST/Webhook smart plug fields
     await _safe_execute(conn, "ALTER TABLE smart_plugs ADD COLUMN rest_on_url VARCHAR(500)")

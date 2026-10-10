@@ -236,6 +236,13 @@ export default {
   },
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "既定の印刷プロファイル",
+      help: "MakerWorld のワンタップ印刷で使います。このプリンター向けの MakerWorld プロファイルでは作成者の変更が上乗せされます。",
+      printer: "プリンタープリセット",
+      process: "プロセスプリセット",
+      loading: "プリセットを読み込み中…",
+    },
     addPreflight: {
       checking: '接続を確認しています...',
       warning: '一部の接続チェックに失敗しました。このプリンターはオフラインと表示される可能性があります。下のチェックを確認し、可能な範囲で修正するか、そのまま保存してください。',
@@ -7525,6 +7532,18 @@ export default {
   makerworld: {
     notDownloadable: "古いプレート：MakerWorld の公式サイトでのみダウンロードできます。",
     printFlow: {
+      gotoMissing: "このプリンターにはまだ既定の印刷プロファイルがありません。先にプリンター設定で設定してください。",
+      slicerUnreachable: "スライサーに接続できないため、何もダウンロードしていません。",
+      openPrinterSettings: "プリンター設定を開く",
+      openSliceDialog: "スライスダイアログを開く",
+      openPrintDialog: "印刷ダイアログを開く",
+      creatorSettingsNotUsed: "この MakerWorld プロファイルはお使いのプリンター向けではありません。既定のプロファイルで、作成者の設定を使わずにスライスし、ベッドに合わせて配置しました。",
+      blocks: {
+        too_many_filaments: "このプレートには AMS に装填されているより多くのフィラメントが必要です。印刷ダイアログでスロットを選んでください。",
+        filament_unmatched: "このプレートのフィラメントに一致する AMS スロットがありません。印刷ダイアログでスロットを選んでください。",
+        filament_ambiguous: "フィラメントが同じ素材の別の色の AMS スロットにしか一致しません。印刷ダイアログでスロットを確認してください。",
+        bed_overflow: "モデルがプリンターのベッドに収まりません。拡大縮小はしません。スライスダイアログで調整してください。",
+      },
       title: "MakerWorldから印刷",
       preparing: "モデルをダウンロード中…",
       slicing: "スライス中…",

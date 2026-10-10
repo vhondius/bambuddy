@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Standaard printprofiel",
+      help: "Gebruikt bij printen vanaf MakerWorld met één tik. Een MakerWorld-profiel voor deze printer voegt de wijzigingen van de maker toe.",
+      printer: "Printer-preset",
+      process: "Proces-preset",
+      loading: "Presets laden…",
+    },
     title: 'Printers',
     addPrinter: 'Printer toevoegen',
     addPreflight: {
@@ -7576,6 +7583,18 @@ export default {
   makerworld: {
     notDownloadable: "Oudere plaat: MakerWorld biedt deze alleen op de eigen website als download aan.",
     printFlow: {
+      gotoMissing: "Deze printer heeft nog geen standaard printprofiel. Stel er eerst een in bij de printerinstellingen.",
+      slicerUnreachable: "De slicer is niet bereikbaar, dus er is niets gedownload.",
+      openPrinterSettings: "Printerinstellingen openen",
+      openSliceDialog: "Slice-venster openen",
+      openPrintDialog: "Printvenster openen",
+      creatorSettingsNotUsed: "Dit MakerWorld-profiel is niet voor jouw printer gemaakt: gesliced met je standaard printprofiel, zonder de instellingen van de maker, en geschikt voor jouw printbed.",
+      blocks: {
+        too_many_filaments: "Deze plaat heeft meer filamenten nodig dan er in de AMS geladen zijn. Kies de slots in het printvenster.",
+        filament_unmatched: "Voor een filament op deze plaat is geen passend AMS-slot. Kies de slots in het printvenster.",
+        filament_ambiguous: "Een filament past alleen bij een AMS-slot met hetzelfde materiaal in een andere kleur. Controleer de slots in het printvenster.",
+        bed_overflow: "Het model past niet op het printbed. Het wordt niet geschaald; pas het aan in het slice-venster.",
+      },
       title: "Printen vanaf MakerWorld",
       preparing: "Model downloaden…",
       slicing: "Slicen…",

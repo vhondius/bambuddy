@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "預設列印設定檔",
+      help: "用於 MakerWorld 一鍵列印。為此印表機製作的 MakerWorld 設定檔會疊加作者的修改。",
+      printer: "印表機預設",
+      process: "製程預設",
+      loading: "正在載入預設…",
+    },
     addPreflight: {
       checking: '正在檢查連線...',
       warning: '部分連線檢查未通過。此印表機可能顯示為離線。請查看下方的檢查項目，盡量修復，或仍然儲存。',
@@ -7509,6 +7516,18 @@ export default {
   makerworld: {
     notDownloadable: "舊版盤：MakerWorld 僅在其官網提供下載。",
     printFlow: {
+      gotoMissing: "此印表機還沒有預設列印設定檔。請先在印表機設定中設定。",
+      slicerUnreachable: "無法連線至切片器，因此未下載任何內容。",
+      openPrinterSettings: "開啟印表機設定",
+      openSliceDialog: "開啟切片視窗",
+      openPrintDialog: "開啟列印視窗",
+      creatorSettingsNotUsed: "此 MakerWorld 設定檔並非為你的印表機製作：已使用你的預設設定檔切片，未使用作者的設定，並依你的熱床重新排列。",
+      blocks: {
+        too_many_filaments: "此盤需要的線材多於 AMS 中已裝載的線材。請在列印視窗中選擇槽位。",
+        filament_unmatched: "此盤中有線材沒有相符的 AMS 槽位。請在列印視窗中選擇槽位。",
+        filament_ambiguous: "有線材只與相同材質但顏色不同的 AMS 槽位相符。請在列印視窗中檢查槽位。",
+        bed_overflow: "模型超出印表機熱床。不會縮放；請在切片視窗中調整。",
+      },
       title: "從 MakerWorld 列印",
       preparing: "正在下載模型…",
       slicing: "正在切片…",

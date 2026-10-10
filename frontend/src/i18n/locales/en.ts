@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Go-to print profile",
+      help: "Used by one-tap MakerWorld printing. A MakerWorld profile made for this printer adds the creator's changes on top.",
+      printer: "Printer preset",
+      process: "Process preset",
+      loading: "Loading presets…",
+    },
     title: 'Printers',
     addPrinter: 'Add Printer',
     addPreflight: {
@@ -7576,6 +7583,18 @@ export default {
   makerworld: {
     notDownloadable: "Older plate: MakerWorld only offers it for download on its own website.",
     printFlow: {
+      gotoMissing: "This printer has no go-to print profile yet. Set one in its printer settings first.",
+      slicerUnreachable: "The slicer isn't reachable, so nothing was downloaded.",
+      openPrinterSettings: "Open printer settings",
+      openSliceDialog: "Open Slice dialog",
+      openPrintDialog: "Open Print dialog",
+      creatorSettingsNotUsed: "This MakerWorld profile wasn't made for your printer: sliced with your go-to profile, without the creator's settings, and arranged for your bed.",
+      blocks: {
+        too_many_filaments: "This plate needs more filaments than are loaded in the AMS. Choose the slots in the Print dialog.",
+        filament_unmatched: "A filament on this plate has no matching AMS slot. Choose the slots in the Print dialog.",
+        filament_ambiguous: "A filament only matches an AMS slot of the same material in another colour. Check the slots in the Print dialog.",
+        bed_overflow: "The model doesn't fit your printer's bed. It won't be scaled; adjust it in the Slice dialog.",
+      },
       title: "Print from MakerWorld",
       preparing: "Downloading the model…",
       slicing: "Slicing…",

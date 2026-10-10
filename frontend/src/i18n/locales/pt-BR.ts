@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Perfil de impressão padrão",
+      help: "Usado na impressão do MakerWorld com um toque. Um perfil do MakerWorld feito para esta impressora adiciona as alterações do criador.",
+      printer: "Predefinição da impressora",
+      process: "Predefinição de processo",
+      loading: "Carregando predefinições…",
+    },
     addPreflight: {
       checking: 'Verificando a conexão...',
       warning: 'Algumas verificações de conexão falharam. Esta impressora pode aparecer como offline. Revise as verificações abaixo, corrija o que puder ou salve mesmo assim.',
@@ -7511,6 +7518,18 @@ export default {
   makerworld: {
     notDownloadable: "Placa antiga: o MakerWorld só a disponibiliza para download no próprio site.",
     printFlow: {
+      gotoMissing: "Esta impressora ainda não tem um perfil de impressão padrão. Defina um nas configurações da impressora primeiro.",
+      slicerUnreachable: "O fatiador não está acessível, então nada foi baixado.",
+      openPrinterSettings: "Abrir configurações da impressora",
+      openSliceDialog: "Abrir janela de fatiamento",
+      openPrintDialog: "Abrir janela de impressão",
+      creatorSettingsNotUsed: "Este perfil do MakerWorld não foi feito para sua impressora: fatiado com seu perfil padrão, sem as configurações do criador, e organizado para sua mesa.",
+      blocks: {
+        too_many_filaments: "Esta placa precisa de mais filamentos do que os carregados no AMS. Escolha os slots na janela de impressão.",
+        filament_unmatched: "Um filamento desta placa não tem slot AMS correspondente. Escolha os slots na janela de impressão.",
+        filament_ambiguous: "Um filamento só corresponde a um slot AMS do mesmo material em outra cor. Confira os slots na janela de impressão.",
+        bed_overflow: "O modelo não cabe na mesa da impressora. Ele não será redimensionado; ajuste-o na janela de fatiamento.",
+      },
       title: "Imprimir do MakerWorld",
       preparing: "Baixando o modelo…",
       slicing: "Fatiando…",

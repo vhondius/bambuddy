@@ -237,6 +237,13 @@ export default {
 
   // Printers page
   printers: {
+    gotoProfile: {
+      title: "Perfil de impresión predeterminado",
+      help: "Se usa al imprimir desde MakerWorld con un toque. Un perfil de MakerWorld hecho para esta impresora añade los cambios del creador.",
+      printer: "Preajuste de impresora",
+      process: "Preajuste de proceso",
+      loading: "Cargando preajustes…",
+    },
     addPreflight: {
       checking: 'Comprobando la conexión...',
       warning: 'Algunas comprobaciones de conexión fallaron. Esta impresora podría aparecer como desconectada. Revisa las comprobaciones de abajo, soluciona lo que puedas o guárdala de todos modos.',
@@ -7533,6 +7540,18 @@ export default {
   makerworld: {
     notDownloadable: "Placa antigua: MakerWorld solo la ofrece para descargar en su propio sitio web.",
     printFlow: {
+      gotoMissing: "Esta impresora aún no tiene un perfil de impresión predeterminado. Configúralo primero en los ajustes de la impresora.",
+      slicerUnreachable: "No se puede acceder al laminador, así que no se ha descargado nada.",
+      openPrinterSettings: "Abrir ajustes de la impresora",
+      openSliceDialog: "Abrir diálogo de laminado",
+      openPrintDialog: "Abrir diálogo de impresión",
+      creatorSettingsNotUsed: "Este perfil de MakerWorld no se hizo para tu impresora: laminado con tu perfil predeterminado, sin los ajustes del creador y colocado para tu cama.",
+      blocks: {
+        too_many_filaments: "Esta placa necesita más filamentos de los cargados en el AMS. Elige las ranuras en el diálogo de impresión.",
+        filament_unmatched: "Un filamento de esta placa no tiene ranura AMS correspondiente. Elige las ranuras en el diálogo de impresión.",
+        filament_ambiguous: "Un filamento solo coincide con una ranura AMS del mismo material en otro color. Revisa las ranuras en el diálogo de impresión.",
+        bed_overflow: "El modelo no cabe en la cama de tu impresora. No se escalará; ajústalo en el diálogo de laminado.",
+      },
       title: "Imprimir desde MakerWorld",
       preparing: "Descargando el modelo…",
       slicing: "Laminando…",
