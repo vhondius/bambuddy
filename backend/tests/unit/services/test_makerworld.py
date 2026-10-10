@@ -543,6 +543,22 @@ class TestGetProfileDownload:
             await svc.get_profile_download(1, "M1")
 
     @pytest.mark.asyncio
+    async def test_other_status_carries_bambus_reason(self):
+        """A 400 has no dedicated mapping; Bambu's own text must still reach
+        the user instead of a bare status code."""
+        svc = self._make_service()
+        resp = MagicMock()
+        resp.status_code = 400
+        resp.json.return_value = {"code": 1, "error": "profile not downloadable"}
+        resp.text = '{"code": 1, "error": "profile not downloadable"}'
+        svc._client.get.return_value = resp
+
+        with pytest.raises(MakerWorldUnavailableError) as exc_info:
+            await svc.get_profile_download(1, "M1")
+        assert "400" in str(exc_info.value)
+        assert "profile not downloadable" in str(exc_info.value)
+
+    @pytest.mark.asyncio
     async def test_maps_timeout_to_unavailable(self):
         svc = self._make_service()
         svc._client.get.side_effect = httpx.TimeoutException("nope")

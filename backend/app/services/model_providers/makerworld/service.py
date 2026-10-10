@@ -446,8 +446,16 @@ class MakerWorldService(ProviderService):
         if response.status_code == 404:
             raise MakerWorldNotFoundError(f"MakerWorld profile not found: {profile_id}")
         if response.status_code != 200:
+            # Bambu explains refusals it has no dedicated status for (a 400
+            # for a profile that can't be downloaded this way, for instance)
+            # only in the body; without it the user is left with a bare code.
+            upstream = _extract_upstream_error(response) or response.text[:200].strip()
+            logger.warning(
+                "Bambu Lab API status %s for profile %s: %s", response.status_code, profile_id, response.text[:500]
+            )
             raise MakerWorldUnavailableError(
                 f"Bambu Lab API unexpected status {response.status_code} for profile {profile_id}"
+                + (f": {upstream}" if upstream else "")
             )
 
         try:
