@@ -1,12 +1,7 @@
-# Bambuddy (MakerWorld one-tap print fork) + slicer sidecars, one stack.
+# Bambuddy (MakerWorld one-tap print fork) + OrcaSlicer sidecar, one stack.
 # Paste into a new Dockge stack. After deploy, in Bambuddy:
-#   Settings -> Slicer: Preferred slicer = Bambu Studio, Use Slicer API = on,
-#   Bambu Studio sidecar URL = http://127.0.0.1:3001
-#   (OrcaSlicer sidecar URL = http://127.0.0.1:3003, if you switch to Orca)
-# Bambu Studio is the default here: MakerWorld files are Bambu Studio
-# projects, and slicing them with the creator's settings (the one-tap flow)
-# runs their Bambu Studio start G-code, which OrcaSlicer can't parse for
-# newer printers such as the X2D.
+#   Settings -> Slicer: Preferred slicer = OrcaSlicer, Use Slicer API = on,
+#   OrcaSlicer sidecar URL = http://127.0.0.1:3003
 # Update: Dockge "Update" pulls the latest :handy image (rebuilt on every
 # push to makerworld-print). Roll back by pinning a :sha-<commit> tag.
 services:
@@ -27,7 +22,6 @@ services:
       - PGID=1000
       - PORT=8000
     depends_on:
-      - bambu-studio-api
       - orca-slicer-api
     restart: unless-stopped
     stop_grace_period: 30s
@@ -40,26 +34,6 @@ services:
       - "127.0.0.1:3003:3000"
     volumes:
       - ./orca:/app/data
-    environment:
-      NODE_ENV: production
-      PORT: "3000"
-      MAX_MODEL_UPLOAD_MB: "512"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 5s
-      start_period: 10s
-      retries: 3
-    restart: unless-stopped
-
-  bambu-studio-api:
-    image: ghcr.io/maziggy/bambu-studio-api:latest
-    container_name: bambu-studio-api
-    # Localhost only: Bambuddy (host network) is the only client.
-    ports:
-      - "127.0.0.1:3001:3000"
-    volumes:
-      - ./bambu:/app/data
     environment:
       NODE_ENV: production
       PORT: "3000"
