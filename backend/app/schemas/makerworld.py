@@ -63,7 +63,10 @@ class MakerWorldImportRequest(BaseModel):
     )
     instance_id: int | None = Field(
         default=None,
-        description="Retained for backwards compatibility; no longer used by the download flow.",
+        description=(
+            "The picked instance (plate set). Preferred over profile_id: the download "
+            "maps it to the profileId MakerWorld's download endpoint accepts."
+        ),
     )
     folder_id: int | None = Field(default=None, description="Target library folder; null = root")
 

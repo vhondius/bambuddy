@@ -236,7 +236,19 @@ class MakerWorldService(ProviderService):
         if not isinstance(alphanumeric_model_id, str) or not alphanumeric_model_id:
             raise MakerWorldUnavailableError("MakerWorld design metadata missing the modelId field")
 
+        # ``sub_id`` may be a profile id or an *instance* id: the
+        # ``#profileId-N`` fragment of a MakerWorld link actually carries the
+        # instance (plate set) id, and the /instances hits list a profileId
+        # the download endpoint doesn't accept. Only design.instances pairs
+        # an instance with the profileId the iot-service wants, so map
+        # through it; an id it doesn't know is passed on unchanged.
         profile_id = int(ref.sub_id) if ref.sub_id else None
+        design_instances = [i for i in design.get("instances") or [] if isinstance(i, dict)]
+        if profile_id is not None and profile_id not in {i.get("profileId") for i in design_instances}:
+            by_instance = {i.get("id"): i.get("profileId") for i in design_instances}
+            mapped = by_instance.get(profile_id)
+            if isinstance(mapped, int) and mapped > 0:
+                profile_id = mapped
         if profile_id is None:
             for instance in design.get("instances") or []:
                 pid = instance.get("profileId")

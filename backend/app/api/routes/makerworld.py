@@ -377,14 +377,19 @@ async def import_instance(
     ref = ProviderResourceRef(
         source_type=provider.source_type,
         external_id=str(body.model_id),
-        sub_id=str(body.profile_id) if body.profile_id else None,
+        # The instance id is the reliable handle: get_download maps it to the
+        # profileId the download endpoint accepts (the hit's own profileId
+        # can be one it rejects).
+        sub_id=str(body.instance_id or body.profile_id) if (body.instance_id or body.profile_id) else None,
     )
 
     try:
         info = await service.get_download(ref)
         # The provider enriches ``sub_id`` with the actually-resolved profile
-        # when the caller omitted one.
-        resolved_profile_id = int(info.ref.sub_id) if info.ref.sub_id else None
+        # when the caller omitted one. A caller that named a profile gets its
+        # own id back — the page keys its imported-plate cards by it — even
+        # when the download had to map it to a different one.
+        resolved_profile_id = body.profile_id or (int(info.ref.sub_id) if info.ref.sub_id else None)
 
         # Canonical URL includes profile_id so each plate gets its own library
         # entry (see ``ModelProvider.canonical_url``).
@@ -535,19 +540,22 @@ async def start_print_flow(
     finally:
         await service.close()
 
-    profile_id, matched = select_profile(
+    instance_id, matched = select_profile(
         resolved.instances, printer.model, printer_nozzle, int(ref.sub_id) if ref.sub_id else None
     )
-    if profile_id is None:
+    if instance_id is None:
         raise HTTPException(status_code=404, detail="This model has no downloadable print profile")
 
     imported = await import_instance(
-        MakerWorldImportRequest(model_id=int(ref.external_id), source_type=provider.source_type, profile_id=profile_id),
+        MakerWorldImportRequest(
+            model_id=int(ref.external_id), source_type=provider.source_type, instance_id=instance_id
+        ),
         db=db,
         credentials=credentials,
         x_api_key=x_api_key,
         api_key_cloud_owner=api_key_cloud_owner,
     )
+    profile_id = imported.profile_id
     source = await db.get(LibraryFile, imported.library_file_id)
     src_path = Path(app_settings.base_dir) / source.file_path
     model_bytes = src_path.read_bytes()

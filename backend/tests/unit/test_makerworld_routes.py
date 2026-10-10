@@ -379,6 +379,26 @@ class TestImport:
         svc.download.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_instance_id_is_the_download_handle(self, async_client, db_session):
+        """The page sends the hit's profileId *and* instance id. The hit's
+        profileId can be one the download endpoint rejects (400 "resource
+        not exist"), so the instance id goes to get_download, which maps it;
+        the response still echoes the caller's profile id, the key the page
+        files the imported card under."""
+        svc = _fake_service(
+            get_download=_download_info(profile_id=35438952),
+            download=ProviderDownload(file_bytes=self._FAKE_3MF_BYTES, filename="benchy.3mf"),
+        )
+        with patch("backend.app.api.routes.makerworld._build_service", AsyncMock(return_value=svc)):
+            resp = await async_client.post(
+                "/api/v1/makerworld/import",
+                json={"model_id": 40146, "instance_id": 109644, "profile_id": 21931235},
+            )
+        assert resp.status_code == 200, resp.text
+        assert svc.get_download.call_args.args[0].sub_id == "109644"
+        assert resp.json()["profile_id"] == 21931235
+
+    @pytest.mark.asyncio
     async def test_unknown_source_type_is_a_clean_400(self, async_client, db_session):
         """``source_type`` names the provider (there is no URL to route on);
         an unregistered value is a client-input problem — 400 before any

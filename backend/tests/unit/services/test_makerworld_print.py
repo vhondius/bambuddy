@@ -1,6 +1,7 @@
 """One-tap MakerWorld print flow (``POST /makerworld/print``).
 
-MakerWorld payloads come from saved fixtures (``_fixtures/makerworld``) and go
+MakerWorld payloads come from saved fixtures (``_fixtures/makerworld``, ids
+and titles from a real model: Bambu's Benchy, design 40146) and go
 through the real ``MakerWorldService.resolve`` merge, so the profile matcher
 sees the same instance shape the route does. The slicer and the AMS matcher
 are stubbed at their seams (``slice_and_persist``, ``plate_mappings``); both
@@ -32,16 +33,21 @@ from backend.app.services.model_providers.makerworld.service import MakerWorldSe
 from backend.app.services.slice_dispatch import SliceDispatchService
 
 FIXTURES = Path(__file__).resolve().parents[2] / "_fixtures" / "makerworld"
-X1C_04 = 298919564
-X1C_06 = 298919777
-A1_04 = 298919107
+# Instance ids — what a MakerWorld link's #profileId-… fragment carries.
+A1 = 109644
+A1_MINI = 40704
+P1S = 224386
+# The profileId design.instances pairs with the A1 instance (the only one the
+# download endpoint accepts), and the different one the /instances hit lists.
+A1_PROFILE = 35438952
+A1_HIT_PROFILE = 21931235
 
 
 async def _resolved(ref: ProviderResourceRef | None = None):
     svc = MakerWorldService(client=MagicMock(spec=httpx.AsyncClient))
     svc.get_design = AsyncMock(return_value=json.loads((FIXTURES / "design.json").read_text()))
     svc.get_design_instances = AsyncMock(return_value=json.loads((FIXTURES / "instances.json").read_text()))
-    return await svc.resolve(ref or ProviderResourceRef(source_type="makerworld", external_id="1400373"))
+    return await svc.resolve(ref or ProviderResourceRef(source_type="makerworld", external_id="40146"))
 
 
 def _project_3mf(printer="Bambu Lab X1 Carbon 0.4 nozzle", process="0.20mm Standard @BBL X1C") -> bytes:
@@ -63,31 +69,53 @@ def _project_3mf(printer="Bambu Lab X1 Carbon 0.4 nozzle", process="0.20mm Stand
 
 class TestSelectProfile:
     @pytest.mark.asyncio
-    async def test_picks_profile_made_for_printer_and_nozzle(self):
+    async def test_picks_instance_made_for_printer_and_nozzle(self):
         instances = (await _resolved()).instances
-        assert select_profile(instances, "X1C", 0.4, None) == (X1C_04, True)
-        assert select_profile(instances, "X1C", 0.6, None) == (X1C_06, True)
+        assert select_profile(instances, "A1", 0.4, None) == (A1, True)
+        assert select_profile(instances, "A1 Mini", 0.4, None) == (A1_MINI, True)
         # Printer codes and MakerWorld product names fold onto the same key.
-        assert select_profile(instances, "BL-P001", 0.4, None) == (X1C_04, True)
-        assert select_profile(instances, "A1", None, None) == (A1_04, True)
+        assert select_profile(instances, "N1", None, None) == (A1_MINI, True)
+        assert select_profile(instances, "C12", 0.4, None) == (P1S, True)
+
+    @pytest.mark.asyncio
+    async def test_nozzle_mismatch_is_not_a_match(self):
+        instances = (await _resolved()).instances
+        assert select_profile(instances, "A1", 0.6, None) == (A1, False)
 
     @pytest.mark.asyncio
     async def test_other_compatibility_is_not_a_match(self):
-        """The A1 profile lists P1S as 'also compatible', but its settings
-        were tuned for the A1: a P1S gets the fallback, not the creator's
-        settings."""
+        """The A1 instance lists P1S as 'also compatible', but its settings
+        were tuned for the A1; an X1C (listed nowhere) gets the fallback."""
         instances = (await _resolved()).instances
-        assert select_profile(instances, "P1S", 0.4, None) == (A1_04, False)
+        assert select_profile(instances, "X1C", 0.4, None) == (A1, False)
 
     @pytest.mark.asyncio
-    async def test_url_profile_wins_and_reports_whether_it_matches(self):
+    async def test_link_fragment_is_an_instance_id_and_wins(self):
         instances = (await _resolved()).instances
-        assert select_profile(instances, "X1C", 0.4, A1_04) == (A1_04, False)
-        assert select_profile(instances, "X1C", 0.4, X1C_04) == (X1C_04, True)
-        assert select_profile(instances, "X1C", 0.4, X1C_06) == (X1C_06, False)
+        assert select_profile(instances, "A1", 0.4, A1) == (A1, True)
+        assert select_profile(instances, "P1S", 0.4, A1) == (A1, False)
+        # A real profileId in the fragment is accepted too.
+        assert select_profile(instances, "A1", 0.4, A1_HIT_PROFILE) == (A1, True)
 
-    def test_no_downloadable_profile(self):
-        assert select_profile([{"id": 1, "profileId": 0}], "X1C", 0.4, None) == (None, False)
+    def test_no_instances(self):
+        assert select_profile([], "X1C", 0.4, None) == (None, False)
+
+
+@pytest.mark.asyncio
+async def test_download_maps_instance_and_hit_ids_to_the_designs_profile():
+    """The download endpoint answers 400 'resource not exist' for the link's
+    instance id and for the /instances hit's profileId; only the profileId
+    design.instances pairs with the instance works."""
+    svc = MakerWorldService(client=MagicMock(spec=httpx.AsyncClient))
+    svc.get_design = AsyncMock(return_value=json.loads((FIXTURES / "design.json").read_text()))
+    svc.get_profile_download = AsyncMock(return_value={"url": "https://makerworld.bblmw.com/x.3mf", "name": "b.3mf"})
+
+    info = await svc.get_download(ProviderResourceRef(source_type="makerworld", external_id="40146", sub_id=str(A1)))
+    svc.get_profile_download.assert_awaited_with(A1_PROFILE, "US2262720d55a8f6")
+    assert info.ref.sub_id == str(A1_PROFILE)
+
+    await svc.get_download(ProviderResourceRef(source_type="makerworld", external_id="40146", sub_id=str(A1_PROFILE)))
+    svc.get_profile_download.assert_awaited_with(A1_PROFILE, "US2262720d55a8f6")
 
 
 def test_embedded_slice_request_names_the_files_own_presets():
@@ -132,7 +160,7 @@ async def test_slice_job_state_is_pushed_over_websocket():
 class TestPrintRoute:
     @pytest.fixture
     async def printer(self, db_session):
-        p = Printer(name="X1C", serial_number="SER1", ip_address="10.0.0.2", access_code="12345678", model="X1C")
+        p = Printer(name="A1", serial_number="SER1", ip_address="10.0.0.2", access_code="12345678", model="A1")
         db_session.add(p)
         await db_session.commit()
         await db_session.refresh(p)
@@ -196,14 +224,14 @@ class TestPrintRoute:
     async def test_happy_path_slices_creator_profile_for_the_printer(self, async_client, printer, flow):
         svc, calls = flow
         resp = await async_client.post(
-            "/api/v1/makerworld/print", json={"url": "https://makerworld.com/en/models/1400373"}
+            "/api/v1/makerworld/print", json={"url": "https://makerworld.com/en/models/40146"}
         )
         assert resp.status_code == 202, resp.text
         start = resp.json()
         assert start["printer_id"] == printer.id
-        assert start["profile_id"] == X1C_04
         assert start["matched_profile"] is True
-        assert svc.get_download.call_args.args[0].sub_id == str(X1C_04)
+        # Imported by instance id; the download maps it to the real profile.
+        assert svc.get_download.call_args.args[0].sub_id == str(A1)
 
         job = await self._finish(async_client, start["job_id"])
         assert job["status"] == "completed", job
@@ -217,22 +245,20 @@ class TestPrintRoute:
         svc, _ = flow
         resp = await async_client.post(
             "/api/v1/makerworld/print",
-            json={"url": f"https://makerworld.com/en/models/1400373#profileId-{X1C_06}"},
+            json={"url": f"https://makerworld.com/en/models/40146-benchy?from=search#profileId-{A1_MINI}"},
         )
         assert resp.status_code == 202, resp.text
-        assert resp.json()["profile_id"] == X1C_06
-        assert svc.get_download.call_args.args[0].sub_id == str(X1C_06)
+        assert resp.json()["matched_profile"] is False  # A1 mini plate on an A1
+        assert svc.get_download.call_args.args[0].sub_id == str(A1_MINI)
         await self._finish(async_client, resp.json()["job_id"])
 
     @pytest.mark.asyncio
     async def test_several_printers_and_none_chosen_asks(self, async_client, db_session, printer, flow):
         db_session.add(Printer(name="P1S", serial_number="SER2", ip_address="10.0.0.3", access_code="1", model="P1S"))
         await db_session.commit()
-        resp = await async_client.post(
-            "/api/v1/makerworld/print", json={"url": "https://makerworld.com/models/1400373"}
-        )
+        resp = await async_client.post("/api/v1/makerworld/print", json={"url": "https://makerworld.com/models/40146"})
         assert resp.status_code == 409
         detail = resp.json()["detail"]
         assert detail["code"] == "printer_required"
-        assert {p["name"] for p in detail["printers"]} == {"X1C", "P1S"}
+        assert {p["name"] for p in detail["printers"]} == {"A1", "P1S"}
         flow[0].resolve.assert_not_called()

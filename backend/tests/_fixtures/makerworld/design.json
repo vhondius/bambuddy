@@ -1,12 +1,12 @@
 {
-  "id": 1400373,
-  "modelId": "US2bb73b106683e5",
-  "title": "Seed Starter",
+  "id": 40146,
+  "modelId": "US2262720d55a8f6",
+  "title": "Benchy Bambu Pla Basic",
   "instances": [
     {
-      "id": 1452154,
-      "profileId": 298919107,
-      "title": "9 cells - A1",
+      "id": 109644,
+      "profileId": 35438952,
+      "title": "14min44s, Bambu PLA Basic, A1",
       "extention": {
         "modelInfo": {
           "compatibility": {"devModelName": "N2S", "devProductName": "A1", "nozzleDiameter": 0.4},
@@ -15,23 +15,23 @@
       }
     },
     {
-      "id": 1452158,
-      "profileId": 298919564,
-      "title": "12 cells - X1C",
+      "id": 40704,
+      "profileId": 35118578,
+      "title": "12min42s, Bambu PLA Basic, A1 mini",
       "extention": {
         "modelInfo": {
-          "compatibility": {"devModelName": "BL-P001", "devProductName": "X1 Carbon", "nozzleDiameter": 0.4},
+          "compatibility": {"devModelName": "N1", "devProductName": "A1 mini", "nozzleDiameter": 0.4},
           "otherCompatibility": []
         }
       }
     },
     {
-      "id": 1452160,
-      "profileId": 298919777,
-      "title": "12 cells - X1C 0.6",
+      "id": 224386,
+      "profileId": 773568064,
+      "title": "14m33s Printtime P1P /P1S und P2S orignal SD Karten Datei",
       "extention": {
         "modelInfo": {
-          "compatibility": {"devModelName": "BL-P001", "devProductName": "X1 Carbon", "nozzleDiameter": 0.6},
+          "compatibility": {"devModelName": "C12", "devProductName": "P1S", "nozzleDiameter": 0.4},
           "otherCompatibility": []
         }
       }

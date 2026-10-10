@@ -73,23 +73,28 @@ def select_profile(
     instances: list[dict],
     printer_model: str | None,
     printer_nozzle: float | None,
-    profile_id: int | None,
+    link_id: int | None,
 ) -> tuple[int | None, bool]:
-    """Pick the MakerWorld profile to print. Returns ``(profile_id, matched)``.
+    """Pick the MakerWorld instance (plate set) to print. Returns
+    ``(instance_id, matched)``; the download maps the instance to the profile
+    MakerWorld serves it under.
 
-    A ``#profileId-…`` from the URL always wins — the user picked that plate
-    set — and is ``matched`` only if it was made for this printer. Otherwise
-    the first profile made for this printer, else the first downloadable one
+    A ``#profileId-…`` from the link always wins — the user picked that plate
+    set. Despite its name it carries the *instance* id (a real profileId is
+    accepted too). It is ``matched`` only if made for this printer.
+    Otherwise the first instance made for this printer, else the first one
     (unmatched, so the caller falls back to the user's own presets).
     """
-    if profile_id:
-        inst = next((i for i in instances if i.get("profileId") == profile_id), None)
-        return profile_id, bool(inst and instance_matches_printer(inst, printer_model, printer_nozzle))
-    candidates = [i for i in instances if isinstance(i.get("profileId"), int) and i["profileId"] > 0]
+    candidates = [i for i in instances if isinstance(i.get("id"), int)]
+    if link_id:
+        inst = next((i for i in candidates if link_id in (i["id"], i.get("profileId"))), None)
+        if inst is None:
+            return link_id, False
+        return inst["id"], instance_matches_printer(inst, printer_model, printer_nozzle)
     for inst in candidates:
         if instance_matches_printer(inst, printer_model, printer_nozzle):
-            return inst["profileId"], True
-    return (candidates[0]["profileId"], False) if candidates else (None, False)
+            return inst["id"], True
+    return (candidates[0]["id"], False) if candidates else (None, False)
 
 
 def embedded_slice_request(model_bytes: bytes, **updates: Any) -> SliceRequest:
