@@ -615,3 +615,39 @@ body {
   border: none;
   border-radius: 999px;
 }
+
+/* ============================================
+   BAMBUDDY HANDY APP: MAKERWORLD'S PALETTE
+   ============================================
+   Set by ThemeContext when the Bambuddy Handy app's marker is in the user
+   agent, so its Bambuddy tabs look like the MakerWorld tab beside them. The
+   values are MakerWorld's own (its MUI colorSystem tokens). !important beats
+   the user's background/accent picks (.dark.bg-*, .accent-*). */
+html.handy {
+  --accent: #00b800 !important;
+  --accent-light: #00b800 !important;
+  --accent-dark: #007b55 !important;
+  --bg-primary: #f7f7f7 !important;
+  --bg-secondary: #ffffff !important;
+  --bg-tertiary: #ebebeb !important;
+  --text-primary: #1f1f1f !important;
+  --text-secondary: #757575 !important;
+  --text-muted: #a3a3a3 !important;
+  --text-tertiary: #c2c2c2 !important;
+  --border-color: #ebebeb !important;
+  --card-shadow: 0 0 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.handy.dark {
+  --accent: #08bf08 !important;
+  --accent-light: #08bf08 !important;
+  --bg-primary: #1c1c1c !important;
+  --bg-secondary: #242424 !important;
+  --bg-tertiary: #3d3d3d !important;
+  --text-primary: #f5f5f5 !important;
+  --text-secondary: #919eab !important;
+  --text-muted: #808080 !important;
+  --text-tertiary: #666666 !important;
+  --border-color: #3d3d3d !important;
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.24) !important;
+}

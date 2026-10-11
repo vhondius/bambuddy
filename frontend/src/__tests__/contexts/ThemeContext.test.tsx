@@ -2,7 +2,7 @@
  * Tests for the ThemeContext system theme detection feature.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { ThemeProvider, useTheme } from '../../contexts/ThemeContext';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -172,6 +172,33 @@ describe('ThemeContext', () => {
       act(() => result.current.setMode('dark'));
 
       expect(document.documentElement.classList.contains('dark')).toBe(true);
+    });
+  });
+
+  describe('Bambuddy Handy app', () => {
+    const realUserAgent = navigator.userAgent;
+    afterEach(() => {
+      Object.defineProperty(navigator, 'userAgent', { value: realUserAgent, configurable: true });
+    });
+
+    it("takes MakerWorld's palette and the app's light/dark in the app", () => {
+      Object.defineProperty(navigator, 'userAgent', {
+        value: `${realUserAgent} BambuddyHandy`,
+        configurable: true,
+      });
+      mockMatchMedia(true);
+      const { result } = renderHook(() => useTheme(), { wrapper });
+      act(() => result.current.setMode('light'));
+      expect(result.current.resolvedMode).toBe('dark');
+      expect(document.documentElement.classList.contains('handy')).toBe(true);
+    });
+
+    it('keeps its own palette and mode elsewhere', () => {
+      mockMatchMedia(true);
+      const { result } = renderHook(() => useTheme(), { wrapper });
+      act(() => result.current.setMode('light'));
+      expect(result.current.resolvedMode).toBe('light');
+      expect(document.documentElement.classList.contains('handy')).toBe(false);
     });
   });
 

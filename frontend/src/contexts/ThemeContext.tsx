@@ -65,8 +65,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
+  // Inside the Bambuddy Handy app Bambuddy wears MakerWorld's palette (the
+  // `handy` class in index.css) and, like MakerWorld, follows the app's
+  // light/dark setting, which reaches the page as prefers-color-scheme.
+  const inHandyApp = typeof navigator !== 'undefined' && navigator.userAgent.includes('BambuddyHandy');
+
   // Resolved mode: what's actually applied (always 'light' or 'dark')
-  const resolvedMode: 'light' | 'dark' = mode === 'system' ? systemPreference : mode;
+  const resolvedMode: 'light' | 'dark' = mode === 'system' || inHandyApp ? systemPreference : mode;
 
   // Dark mode settings
   const [darkStyle, setDarkStyleState] = useState<ThemeStyle>(() => {
@@ -165,9 +170,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.add(`accent-${lightAccent}`);
     }
 
+    root.classList.toggle('handy', inHandyApp);
+
     localStorage.setItem('theme-mode', mode);
     localStorage.removeItem('theme');
-  }, [mode, resolvedMode, darkStyle, darkBackground, darkAccent, lightStyle, lightBackground, lightAccent]);
+  }, [inHandyApp, mode, resolvedMode, darkStyle, darkBackground, darkAccent, lightStyle, lightBackground, lightAccent]);
 
   const toggleMode = () => setModeState(prev => {
     if (prev === 'dark') return 'light';
