@@ -7533,6 +7533,8 @@ export default {
   makerworld: {
     notDownloadable: "Ältere Platte: MakerWorld bietet sie nur auf der eigenen Website zum Download an.",
     printFlow: {
+      editSettings: "Einstellungen bearbeiten",
+      saveAndReslice: "Speichern & neu slicen",
       gotoMissing: "Dieser Drucker hat noch kein Standard-Druckprofil. Lege zuerst eines in den Druckereinstellungen fest.",
       slicerUnreachable: "Der Slicer ist nicht erreichbar, daher wurde nichts heruntergeladen.",
       openPrinterSettings: "Druckereinstellungen öffnen",

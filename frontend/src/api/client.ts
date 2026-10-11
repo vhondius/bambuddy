@@ -2145,6 +2145,10 @@ export interface MakerworldPrintResult extends SliceResponse {
   block?: 'bed_overflow';
   block_detail?: string;
   source_filename?: string;
+  /** The go-to process preset and the creator's settings carried — what
+   *  "Edit settings" starts from. */
+  process_preset?: PresetRef;
+  design_overrides?: string[];
   plates: MakerworldPrintPlate[];
 }
 
@@ -6144,10 +6148,14 @@ export const api = {
     }),
   /** One-tap print: resolve + import + background slice. 409 with
    *  `detail.code === 'printer_required'` lists printers to choose from. */
-  startMakerworldPrint: (url: string, printerId?: number | null) =>
+  startMakerworldPrint: (
+    url: string,
+    printerId?: number | null,
+    edits?: { process_overrides: Record<string, string | string[]>; design_overrides: string[] } | null,
+  ) =>
     request<MakerworldPrintStart>('/makerworld/print', {
       method: 'POST',
-      body: JSON.stringify({ url, printer_id: printerId ?? null }),
+      body: JSON.stringify({ url, printer_id: printerId ?? null, ...(edits ?? {}) }),
     }),
   getMakerworldRecentImports: (limit = 10) =>
     request<MakerworldRecentImport[]>(`/makerworld/recent-imports?limit=${limit}`),

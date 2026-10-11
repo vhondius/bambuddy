@@ -7582,6 +7582,8 @@ errors: {
   makerworld: {
     notDownloadable: "Äldre platta: MakerWorld erbjuder den bara för nedladdning på sin egen webbplats.",
     printFlow: {
+      editSettings: "Redigera inställningar",
+      saveAndReslice: "Spara och slica om",
       gotoMissing: "Den här skrivaren har ingen standardutskriftsprofil än. Ange en i skrivarens inställningar först.",
       slicerUnreachable: "Slicern går inte att nå, så inget laddades ner.",
       openPrinterSettings: "Öppna skrivarinställningar",

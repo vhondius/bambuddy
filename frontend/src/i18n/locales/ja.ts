@@ -7533,6 +7533,8 @@ export default {
   makerworld: {
     notDownloadable: "古いプレート：MakerWorld の公式サイトでのみダウンロードできます。",
     printFlow: {
+      editSettings: "設定を編集",
+      saveAndReslice: "保存して再スライス",
       gotoMissing: "このプリンターにはまだ既定の印刷プロファイルがありません。先にプリンター設定で設定してください。",
       slicerUnreachable: "スライサーに接続できないため、何もダウンロードしていません。",
       openPrinterSettings: "プリンター設定を開く",

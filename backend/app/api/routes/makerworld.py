@@ -621,6 +621,11 @@ async def start_print_flow(
         creator_settings=matched,
         bed_type=printer.installed_bed_type,
     )
+    # "Edit settings" on the preview: the user's picks replace the defaults.
+    if body.design_overrides is not None:
+        request.design_overrides = body.design_overrides
+    if body.process_overrides:
+        request.process_overrides = body.process_overrides
 
     cloud_token_user = current_user or api_key_cloud_owner
     user_id = cloud_token_user.id if cloud_token_user else None
@@ -665,6 +670,9 @@ async def start_print_flow(
             "source_library_file_id": source_id,
             "profile_id": profile_id,
             "notice": notice,
+            # What the preview's settings editor starts from.
+            "process_preset": process_ref.model_dump(),
+            "design_overrides": request.design_overrides or [],
             "plates": [
                 {
                     "plate": p["plate"],

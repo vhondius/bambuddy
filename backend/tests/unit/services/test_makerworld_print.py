@@ -337,6 +337,27 @@ class TestPrintRoute:
         assert result["plates"] == [{"plate": 1, "ams_mapping": [0], "block": None}]
 
     @pytest.mark.asyncio
+    async def test_edited_settings_reslice_with_the_users_changes(self, async_client, printer, flow):
+        """Edit settings on the preview: the user's process changes go on top,
+        and only the creator's changes they kept are carried."""
+        _, state = flow
+        resp = await self._start(
+            async_client,
+            printer_id=printer.id,
+            process_overrides={"wall_loops": "4", "enable_support": "1"},
+            design_overrides=["sparse_infill_density"],
+        )
+        assert resp.status_code == 202, resp.text
+        job = await self._finish(async_client, resp.json()["job_id"])
+        assert job["status"] == "completed", job
+        req = state["request"]
+        assert req.process_overrides == {"wall_loops": "4", "enable_support": "1"}
+        assert req.design_overrides == ["sparse_infill_density"]
+        result = job["result"]
+        assert result["process_preset"] == {"source": "cloud", "id": "PFUSmyprocess"}
+        assert result["design_overrides"] == ["sparse_infill_density"]
+
+    @pytest.mark.asyncio
     async def test_no_matching_profile_arranges_with_goto_presets_and_says_so(
         self, async_client, db_session, printer, flow
     ):

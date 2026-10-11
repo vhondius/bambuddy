@@ -7574,6 +7574,8 @@ export default {
   makerworld: {
     notDownloadable: "Старий стіл: MakerWorld дозволяє завантажити його лише на своєму сайті.",
     printFlow: {
+      editSettings: "Змінити налаштування",
+      saveAndReslice: "Зберегти й перенарізати",
       gotoMissing: "Цей принтер ще не має основного профілю друку. Спочатку задайте його в налаштуваннях принтера.",
       slicerUnreachable: "Слайсер недоступний, тому нічого не завантажено.",
       openPrinterSettings: "Відкрити налаштування принтера",

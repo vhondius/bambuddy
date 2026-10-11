@@ -6974,6 +6974,8 @@ export default {
   makerworld: {
     notDownloadable: "이전 플레이트: MakerWorld 웹사이트에서만 다운로드할 수 있습니다.",
     printFlow: {
+      editSettings: "설정 편집",
+      saveAndReslice: "저장 후 다시 슬라이스",
       gotoMissing: "이 프린터에는 아직 기본 출력 프로필이 없습니다. 먼저 프린터 설정에서 지정하세요.",
       slicerUnreachable: "슬라이서에 연결할 수 없어 아무것도 다운로드하지 않았습니다.",
       openPrinterSettings: "프린터 설정 열기",

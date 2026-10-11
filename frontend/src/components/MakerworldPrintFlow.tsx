@@ -10,6 +10,8 @@ import {
   type SliceJobState,
 } from '../api/client';
 import { buildLoadedFilaments } from '../hooks/useFilamentMapping';
+import type { SettingValue } from '../types/slicerSettings';
+import SlicerSettingsPanel from './SlicerSettingsPanel';
 import { useToast } from '../contexts/ToastContext';
 import { formatDuration } from '../utils/date';
 import { Button } from './Button';
@@ -27,6 +29,7 @@ type Step =
   | { kind: 'pickPrinter'; printers: PrinterChoice[] }
   | { kind: 'slicing'; jobId: number; job: SliceJobState | null }
   | { kind: 'preview'; result: MakerworldPrintResult }
+  | { kind: 'editSettings'; result: MakerworldPrintResult }
   | { kind: 'error'; message: string; handover?: Handover };
 
 /** Where the flow hands over instead of guessing (requirement D): the
@@ -49,6 +52,13 @@ interface MakerworldPrintFlowProps {
   onClose: () => void;
 }
 
+/** "Edit settings" on the preview: the panel's state, and what the re-slice sends. */
+interface Edits {
+  values: Record<string, SettingValue>;
+  serialized: Record<string, string | string[]>;
+  designKeys: string[];
+}
+
 /**
  * One-tap "print from a MakerWorld link": resolve → import → slice (a
  * background slice job, progress over the WebSocket) → preview → queue on
@@ -62,6 +72,8 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
     resumeJobId ? { kind: 'slicing', jobId: resumeJobId, job: null } : { kind: 'starting' },
   );
   const [openDialog, setOpenDialog] = useState<Handover | null>(null);
+  // Kept across re-slices so a second edit starts from the first one.
+  const [edits, setEdits] = useState<Edits | null>(null);
   const handOver = (h: Handover) => {
     if (h.to === 'printerSettings') {
       onClose();
@@ -72,10 +84,14 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
   };
 
   const start = useCallback(
-    async (chosenPrinterId?: number | null) => {
+    async (chosenPrinterId?: number | null, withEdits: Edits | null = null) => {
       setStep({ kind: 'starting' });
       try {
-        const started = await api.startMakerworldPrint(url, chosenPrinterId);
+        const started = await api.startMakerworldPrint(
+          url,
+          chosenPrinterId,
+          withEdits && { process_overrides: withEdits.serialized, design_overrides: withEdits.designKeys },
+        );
         setStep({ kind: 'slicing', jobId: started.job_id, job: null });
         onJobStarted?.(started.job_id);
       } catch (err) {
@@ -160,7 +176,7 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
         role="dialog"
         aria-modal="true"
         aria-label={t('makerworld.printFlow.title')}
-        className="bg-bambu-dark-secondary w-full h-full md:h-auto md:max-h-[90vh] md:max-w-lg md:rounded-xl overflow-y-auto flex flex-col"
+        className={`bg-bambu-dark-secondary w-full h-full md:h-auto md:max-h-[90vh] ${step.kind === 'editSettings' ? 'md:max-w-4xl' : 'md:max-w-lg'} md:rounded-xl overflow-y-auto flex flex-col`}
       >
         <div className="flex items-center justify-between p-4 border-b border-bambu-dark-tertiary">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -202,16 +218,28 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
                 {step.handover && (
                   <Button onClick={() => handOver(step.handover!)}>{handoverLabel(step.handover, t)}</Button>
                 )}
-                <Button variant="secondary" onClick={() => start(printerId)}>
+                <Button variant="secondary" onClick={() => start(printerId, edits)}>
                   {t('makerworld.printFlow.retry')}
                 </Button>
               </div>
             </div>
           )}
+          {step.kind === 'editSettings' && (
+            <EditSettings
+              result={step.result}
+              edits={edits}
+              onCancel={() => setStep({ kind: 'preview', result: step.result })}
+              onSave={(next) => {
+                setEdits(next);
+                start(step.result.printer_id, next);
+              }}
+            />
+          )}
           {step.kind === 'preview' && (
             <Preview
               result={step.result}
               onHandOver={handOver}
+              onEditSettings={() => setStep({ kind: 'editSettings', result: step.result })}
               onDone={() => {
                 showToast(t('makerworld.printFlow.queued'), 'success');
                 onClose();
@@ -257,10 +285,12 @@ function Preview({
   result,
   onDone,
   onHandOver,
+  onEditSettings,
 }: {
   result: MakerworldPrintResult;
   onDone: () => void;
   onHandOver: (h: Handover) => void;
+  onEditSettings: () => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -361,6 +391,11 @@ function Preview({
         >
           {t('makerworld.printFlow.gcodePreview')}
         </Button>
+        {result.process_preset && (
+          <Button variant="secondary" className="flex-1 min-w-[8rem]" onClick={onEditSettings}>
+            {t('makerworld.printFlow.editSettings')}
+          </Button>
+        )}
         {block ? (
           <Button
             className="flex-1 min-w-[8rem]"
@@ -380,6 +415,77 @@ function Preview({
             {queueing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('makerworld.printFlow.print')}
           </Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The Slice dialog's process editor on the go-to process preset: values that
+ * differ from it are marked, the creator's changes show as "from file" with
+ * the ones in use ticked. Saving re-slices.
+ */
+function EditSettings({
+  result,
+  edits,
+  onCancel,
+  onSave,
+}: {
+  result: MakerworldPrintResult;
+  edits: Edits | null;
+  onCancel: () => void;
+  onSave: (edits: Edits) => void;
+}) {
+  const { t } = useTranslation();
+  const [values, setValues] = useState<Record<string, SettingValue>>(edits?.values ?? {});
+  const [serialized, setSerialized] = useState<Record<string, string | string[]>>(edits?.serialized ?? {});
+  const [designKeys, setDesignKeys] = useState<Set<string>>(
+    () => new Set(edits?.designKeys ?? result.design_overrides ?? []),
+  );
+  const process = result.process_preset!;
+  const presetValuesQuery = useQuery({
+    queryKey: ['slicer-preset-values', process.source, process.id],
+    queryFn: () => api.getSlicerPresetValues(process),
+    staleTime: 5 * 60_000,
+  });
+  // The creator's changes are read from the unsliced source file.
+  const { data: sourcePlates } = useQuery({
+    queryKey: ['library-file-plates', result.source_library_file_id],
+    queryFn: () => api.getLibraryFilePlates(result.source_library_file_id),
+  });
+
+  return (
+    <div className="space-y-4">
+      <SlicerSettingsPanel
+        values={values}
+        onChange={(v, s) => {
+          setValues(v);
+          setSerialized(s);
+        }}
+        presetValues={presetValuesQuery.data?.values as Record<string, SettingValue> | undefined}
+        presetValuesResolved={presetValuesQuery.data?.resolved ?? presetValuesQuery.isLoading}
+        presetValuesReason={presetValuesQuery.data?.reason ?? (presetValuesQuery.isError ? 'sidecar_unavailable' : undefined)}
+        sourceOverrides={sourcePlates?.design_overrides ?? []}
+        sourceSelected={designKeys}
+        onToggleSource={(key, on) =>
+          setDesignKeys((prev) => {
+            const next = new Set(prev);
+            if (on) next.add(key);
+            else next.delete(key);
+            return next;
+          })
+        }
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" className="flex-1 min-w-[8rem]" onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button
+          className="flex-1 min-w-[8rem]"
+          onClick={() => onSave({ values, serialized, designKeys: [...designKeys] })}
+        >
+          {t('makerworld.printFlow.saveAndReslice')}
+        </Button>
       </div>
     </div>
   );

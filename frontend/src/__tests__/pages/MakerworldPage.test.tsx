@@ -408,6 +408,8 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
             source_library_file_id: 7,
             profile_id: 298919564,
             notice: printNotice,
+            process_preset: { source: 'standard', id: '0.20mm Standard @BBL X2D' },
+            design_overrides: ['wall_loops'],
             plates: [{ plate: 1, ams_mapping: [0], block: printBlock }],
           },
         }),
@@ -433,6 +435,18 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
         }),
       ),
       http.get('*/printers/3/status', () => HttpResponse.json({ connected: true, ams: [], vt_tray: [] })),
+      http.get('*/slicer/preset-values', () =>
+        HttpResponse.json({ resolved: true, reason: 'ok', values: { layer_height: '0.2', wall_loops: '2' } }),
+      ),
+      http.get('*/library/files/7/plates', () =>
+        HttpResponse.json({
+          file_id: 7,
+          filename: 'seed.3mf',
+          is_multi_plate: false,
+          plates: [],
+          design_overrides: [{ key: 'wall_loops', value: '4', printer_coupled: false, preset_defining: false }],
+        }),
+      ),
     );
   }
 
@@ -447,6 +461,29 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
     expect(await screen.findByText('Textured PEI Plate')).toBeInTheDocument();
     // The job id lands in the URL so returning from the G-code preview resumes.
     expect(window.location.search).toContain('job=41');
+  });
+
+  it('edits settings on the preview and re-slices with them', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    usePrintFlowHandlers(bodies);
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Edit settings' }));
+    const layer = await screen.findByLabelText(/^Layer height/);
+    await user.clear(layer);
+    await user.type(layer, '0.28');
+    await user.click(screen.getByRole('button', { name: 'Save & re-slice' }));
+
+    await screen.findByRole('button', { name: 'Print' });
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toMatchObject({
+      url: MODEL,
+      printer_id: 3,
+      process_overrides: { layer_height: '0.28' },
+      design_overrides: ['wall_loops'],
+    });
   });
 
   it('puts back a #profileId that an unencoded link left in the page hash', async () => {

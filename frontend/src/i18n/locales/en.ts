@@ -7584,6 +7584,8 @@ export default {
   makerworld: {
     notDownloadable: "Older plate: MakerWorld only offers it for download on its own website.",
     printFlow: {
+      editSettings: "Edit settings",
+      saveAndReslice: "Save & re-slice",
       gotoMissing: "This printer has no go-to print profile yet. Set one in its printer settings first.",
       slicerUnreachable: "The slicer isn't reachable, so nothing was downloaded.",
       openPrinterSettings: "Open printer settings",

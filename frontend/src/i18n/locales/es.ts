@@ -7541,6 +7541,8 @@ export default {
   makerworld: {
     notDownloadable: "Placa antigua: MakerWorld solo la ofrece para descargar en su propio sitio web.",
     printFlow: {
+      editSettings: "Editar ajustes",
+      saveAndReslice: "Guardar y volver a laminar",
       gotoMissing: "Esta impresora aún no tiene un perfil de impresión predeterminado. Configúralo primero en los ajustes de la impresora.",
       slicerUnreachable: "No se puede acceder al laminador, así que no se ha descargado nada.",
       openPrinterSettings: "Abrir ajustes de la impresora",

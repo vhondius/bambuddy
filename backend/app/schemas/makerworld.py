@@ -136,3 +136,12 @@ class MakerWorldPrintRequest(BaseModel):
         default=None,
         description="Target printer. Required when more than one printer is configured (409 otherwise).",
     )
+    # Set by "Edit settings" on the preview to re-slice with the user's edits.
+    process_overrides: dict[str, Any] | None = Field(
+        default=None, description="Process settings to change on top of the go-to process preset"
+    )
+    design_overrides: list[str] | None = Field(
+        default=None,
+        description="Creator's changed settings to carry, by key. Omitted: all of them when the profile was "
+        "made for this printer, none otherwise.",
+    )

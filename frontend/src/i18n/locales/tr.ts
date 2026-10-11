@@ -7470,6 +7470,8 @@ export default {
   makerworld: {
     notDownloadable: "Eski plaka: MakerWorld bunu yalnızca kendi web sitesinde indirmeye sunuyor.",
     printFlow: {
+      editSettings: "Ayarları düzenle",
+      saveAndReslice: "Kaydet ve yeniden dilimle",
       gotoMissing: "Bu yazıcının henüz varsayılan baskı profili yok. Önce yazıcı ayarlarından birini seçin.",
       slicerUnreachable: "Dilimleyiciye ulaşılamıyor, bu yüzden hiçbir şey indirilmedi.",
       openPrinterSettings: "Yazıcı ayarlarını aç",
