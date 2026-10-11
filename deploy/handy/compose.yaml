@@ -2,8 +2,8 @@
 # Paste into a new Dockge stack. After deploy, in Bambuddy:
 #   Settings -> Slicer: Preferred slicer = OrcaSlicer, Use Slicer API = on,
 #   OrcaSlicer sidecar URL = http://127.0.0.1:3003
-# Update: Dockge "Update" pulls the latest :handy image (rebuilt on every
-# push to makerworld-print). Roll back by pinning a :sha-<commit> tag.
+# Update: Dockge "Update" pulls the latest :handy image. Roll back by pinning
+# a :sha-<commit> tag.
 services:
   bambuddy:
     image: ghcr.io/vhondius/bambuddy:handy

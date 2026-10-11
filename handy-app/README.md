@@ -24,7 +24,7 @@ in the visible tab, pull down to refresh.
 
 ## Install
 
-1. Build the APK (below) or take a built `app-debug.apk`.
+1. Download the APK from the [latest release](https://github.com/vhondius/bambuddy-handy/releases/latest), or build it (below).
 2. Copy it to the phone and open it (allow "install unknown apps" for the file
    manager when asked), or with USB debugging: `adb install -r app-debug.apk`.
 3. On first start, the Settings tab opens: enter the address you use for Bambuddy in a

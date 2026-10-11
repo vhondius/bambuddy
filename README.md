@@ -51,8 +51,10 @@ run on your own Bambuddy. Away from home, reach Bambuddy over your VPN.
    - Sign in to Bambu Cloud, for MakerWorld downloads.
    - Give each printer a **go-to print profile** in its printer settings. You
      can change it there at any time.
-3. **Install the app** (see [`handy-app/`](handy-app/README.md)). On first
-   start, enter your Bambuddy address.
+3. **Install the app:** download the APK from the
+   [latest release](https://github.com/vhondius/bambuddy-handy/releases/latest) and open it on your phone (allow installing from
+   unknown sources when asked). On first start, enter your Bambuddy address.
+   To build it yourself, see [`handy-app/`](handy-app/README.md).
 
 **No Android phone?** The same one-tap flow works in any browser: put your
 Bambuddy address and `/makerworld?url=` in front of a MakerWorld link, e.g.
@@ -60,9 +62,8 @@ Bambuddy address and `/makerworld?url=` in front of a MakerWorld link, e.g.
 
 ## About the fork
 
-This is a fork of [maziggy/bambuddy](https://github.com/maziggy/bambuddy)
-(branch `makerworld-print`). Its changes exist to make the app's one-tap
-printing possible; everything else in Bambuddy works as before. Things you may
+This is a fork of [maziggy/bambuddy](https://github.com/maziggy/bambuddy).
+Its changes exist to make the app's one-tap printing possible; everything else in Bambuddy works as before. Things you may
 notice as a Bambuddy user:
 
 - The **one-tap print flow** described above, at `/makerworld?url=…`.

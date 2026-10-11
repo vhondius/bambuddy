@@ -1,10 +1,10 @@
-# Fork-only: builds the makerworld-print branch into ghcr.io/<owner>/bambuddy:handy
+# Builds main into ghcr.io/<owner>/bambuddy:handy
 # so a Dockge stack can pull it (deploy/handy/compose.yaml).
 name: Handy image
 
 on:
   push:
-    branches: [makerworld-print]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
