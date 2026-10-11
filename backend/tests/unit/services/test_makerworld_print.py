@@ -54,7 +54,8 @@ async def _resolved(ref: ProviderResourceRef | None = None):
 
 
 def _project_3mf() -> bytes:
-    """A creator's A1 project: one red PLA Basic, walls and infill changed."""
+    """A creator's A1 project: one red PLA Basic; walls, infill, a speed and
+    the layer height changed."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("3D/3dmodel.model", "<model/>")
@@ -69,7 +70,13 @@ def _project_3mf() -> bytes:
                     "filament_colour": ["#FF0000"],
                     "wall_loops": "4",
                     "sparse_infill_density": "25%",
-                    "different_settings_to_system": ["wall_loops;sparse_infill_density", "", ""],
+                    "outer_wall_speed": "120",
+                    "layer_height": "0.16",
+                    "different_settings_to_system": [
+                        "wall_loops;sparse_infill_density;outer_wall_speed;layer_height",
+                        "",
+                        "",
+                    ],
                 }
             ),
         )
@@ -316,18 +323,18 @@ class TestPrintRoute:
         assert resp.status_code == 202, resp.text
         start = resp.json()
         assert start["printer_id"] == printer.id
-        assert start["matched_profile"] is True
-        # Imported by instance id; the download maps it to the real profile.
-        assert svc.get_download.call_args.args[0].sub_id == str(A1)
 
         job = await self._finish(async_client, start["job_id"])
         assert job["status"] == "completed", job
+        assert job["result"]["matched_profile"] is True
+        # Imported by instance id; the download maps it to the real profile.
+        assert svc.get_download.call_args.args[0].sub_id == str(A1)
         req = state["request"]
         assert (req.printer_preset.source, req.printer_preset.id) == ("standard", "Bambu Lab A1 0.4 nozzle")
         assert (req.process_preset.source, req.process_preset.id) == ("cloud", "PFUSmyprocess")
         assert [f.id for f in req.filament_presets] == ["Bambu PLA Basic @BBL A1"]
         assert req.filament_colours == ["#FF0000"]
-        assert set(req.design_overrides) == {"wall_loops", "sparse_infill_density"}
+        assert set(req.design_overrides) == {"wall_loops", "sparse_infill_density", "outer_wall_speed", "layer_height"}
         assert req.auto_arrange is False
         assert req.use_embedded_settings is False
         assert req.bed_type == "Textured PEI Plate"
@@ -366,21 +373,22 @@ class TestPrintRoute:
         self, async_client, db_session, printer, flow
     ):
         """An X2D: no Benchy plate is made for it. The A1 file is sliced with
-        the X2D go-to presets, its filament re-targeted to the X2D, without
-        the creator's changes, arranged for the X2D bed."""
+        the X2D go-to presets, its filament re-targeted to the X2D, with the
+        creator's design changes but not their printer-specific ones or layer
+        height, arranged for the X2D bed."""
         printer.model = "X2D"
         printer.goto_printer_preset_id = "Bambu Lab X2D 0.4 nozzle"
         await db_session.commit()
         _, state = flow
         resp = await self._start(async_client)
         assert resp.status_code == 202, resp.text
-        assert resp.json()["matched_profile"] is False
         job = await self._finish(async_client, resp.json()["job_id"])
+        assert job["result"]["matched_profile"] is False
         req = state["request"]
         assert [f.id for f in req.filament_presets] == ["Bambu PLA Basic @BBL X2D"]
-        assert req.design_overrides == []
+        assert set(req.design_overrides) == {"wall_loops", "sparse_infill_density"}
         assert req.auto_arrange is True
-        assert job["result"]["notice"] == "creator_settings_not_used"
+        assert job["result"]["notice"] == "creator_printer_settings_not_used"
 
     @pytest.mark.asyncio
     async def test_link_to_a_plate_for_another_printer_is_sliced_as_fallback(self, async_client, printer, flow):
@@ -389,9 +397,9 @@ class TestPrintRoute:
             async_client, f"https://makerworld.com/en/models/40146-benchy?from=search#profileId-{A1_MINI}"
         )
         assert resp.status_code == 202, resp.text
-        assert resp.json()["matched_profile"] is False  # an A1 mini plate on an A1
+        job = await self._finish(async_client, resp.json()["job_id"])
+        assert job["result"]["matched_profile"] is False  # an A1 mini plate on an A1
         assert svc.get_download.call_args.args[0].sub_id == str(A1_MINI)
-        await self._finish(async_client, resp.json()["job_id"])
         assert state["request"].auto_arrange is True
 
     @pytest.mark.asyncio
@@ -402,7 +410,21 @@ class TestPrintRoute:
         job = await self._finish(async_client, resp.json()["job_id"])
         assert job["status"] == "completed", job
         assert job["result"]["block"] == "bed_overflow"
-        assert job["result"]["source_library_file_id"] == resp.json()["source_library_file_id"]
+        assert job["result"]["source_library_file_id"]
+        assert job["result"]["source_filename"] == "seed.3mf"
+
+    @pytest.mark.asyncio
+    async def test_no_fitting_filament_preset_hands_over_to_the_slice_dialog(self, async_client, printer, flow):
+        with patch(
+            "backend.app.api.routes.slicer_presets._fetch_bundled_presets",
+            AsyncMock(return_value={"filament": []}),
+        ):
+            resp = await self._start(async_client)
+            job = await self._finish(async_client, resp.json()["job_id"])
+        assert job["status"] == "completed", job
+        assert job["result"]["block"] == "no_filament_preset"
+        assert job["result"]["source_filename"] == "seed.3mf"
+        assert "request" not in flow[1]  # nothing sliced
 
     @pytest.mark.asyncio
     async def test_other_slicer_errors_fail_the_job(self, async_client, printer, flow):
@@ -465,13 +487,13 @@ class TestPrintRoute:
 
         svc, _ = flow
         svc.resolve.side_effect = MakerWorldForbiddenError("This model requires points to download")
-        resp = await self._start(async_client)
-        assert resp.status_code == 403
-        assert "points" in resp.json()["detail"]
+        job = await self._finish(async_client, (await self._start(async_client)).json()["job_id"])
+        assert job["status"] == "failed"
+        assert "points" in job["error_detail"]
         svc.resolve.side_effect = MakerWorldAuthError("Your Bambu Cloud sign-in has expired")
-        resp = await self._start(async_client)
-        assert resp.status_code == 401
-        assert "expired" in resp.json()["detail"]
+        job = await self._finish(async_client, (await self._start(async_client)).json()["job_id"])
+        assert job["status"] == "failed"
+        assert "expired" in job["error_detail"]
 
     @pytest.mark.asyncio
     async def test_several_printers_and_none_chosen_asks(self, async_client, db_session, printer, flow):

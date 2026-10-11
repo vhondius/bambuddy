@@ -109,16 +109,6 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
           setStep({ kind: 'error', message: t('makerworld.printFlow.gotoMissing'), handover: { to: 'printerSettings' } });
         } else if (err instanceof ApiError && err.code === 'slicer_unreachable') {
           setStep({ kind: 'error', message: `${t('makerworld.printFlow.slicerUnreachable')}\n${err.message}` });
-        } else if (err instanceof ApiError && err.code === 'no_filament_preset') {
-          const id = Number(err.detail?.source_library_file_id);
-          setStep({
-            kind: 'error',
-            message: err.message,
-            handover: {
-              to: 'slice',
-              source: { kind: 'libraryFile', id, filename: String(err.detail?.source_filename ?? '') },
-            },
-          });
         } else {
           setStep({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
         }
@@ -142,11 +132,11 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
         if (prev.kind !== 'slicing') return prev;
         if (job.status === 'completed') {
           const result = job.result as MakerworldPrintResult;
-          if (result.block === 'bed_overflow') {
-            // Never scaled: the unsliced model goes to the Slice dialog.
+          if (result.block === 'bed_overflow' || result.block === 'no_filament_preset') {
+            // Nothing sliced (and never scaled): the model goes to the Slice dialog.
             return {
               kind: 'error',
-              message: t('makerworld.printFlow.blocks.bed_overflow'),
+              message: t(`makerworld.printFlow.blocks.${result.block}`),
               handover: {
                 to: 'slice',
                 source: {
@@ -199,7 +189,8 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
           {step.kind === 'starting' && <Busy label={t('makerworld.printFlow.preparing')} />}
           {step.kind === 'slicing' && (
             <Busy
-              label={step.job?.progress?.stage ?? t('makerworld.printFlow.slicing')}
+              // The job downloads the model before the slicer reports stages.
+              label={step.job?.progress?.stage ?? t('makerworld.printFlow.preparing')}
               percent={step.job?.progress?.total_percent}
             />
           )}
@@ -341,9 +332,9 @@ function Preview({
 
   return (
     <div className="space-y-4">
-      {result.notice === 'creator_settings_not_used' && (
+      {result.notice === 'creator_printer_settings_not_used' && (
         <p className="text-sm rounded-lg p-3 bg-amber-500/10 text-amber-300">
-          {t('makerworld.printFlow.creatorSettingsNotUsed')}
+          {t('makerworld.printFlow.creatorPrinterSettingsNotUsed')}
         </p>
       )}
       {result.plates.length > 1 && (

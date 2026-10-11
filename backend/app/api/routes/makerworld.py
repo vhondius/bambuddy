@@ -567,83 +567,84 @@ async def start_print_flow(
     except (AttributeError, IndexError, TypeError, ValueError):
         pass
 
-    service = await _build_service(db, provider, current_user, api_key_cloud_owner)
-    try:
-        resolved = await service.resolve(ref)
-    except ProviderError as exc:
-        raise _map_service_error(exc) from exc
-    finally:
-        await service.close()
-
-    instance_id, matched = select_profile(
-        resolved.instances, printer.model, printer_nozzle, int(ref.sub_id) if ref.sub_id else None
-    )
-    if instance_id is None:
-        raise HTTPException(status_code=404, detail="This model has no downloadable print profile")
-
-    imported = await import_instance(
-        MakerWorldImportRequest(
-            model_id=int(ref.external_id), source_type=provider.source_type, instance_id=instance_id
-        ),
-        db=db,
-        credentials=credentials,
-        x_api_key=x_api_key,
-        api_key_cloud_owner=api_key_cloud_owner,
-    )
-    profile_id = imported.profile_id
-    source = await db.get(LibraryFile, imported.library_file_id)
-    file_nozzle = (source.file_metadata or {}).get("nozzle_diameter")
-    if matched and file_nozzle and printer_nozzle and abs(float(file_nozzle) - printer_nozzle) > 1e-3:
-        matched = False  # made for this model, but for another nozzle
-    model_bytes = (Path(app_settings.base_dir) / source.file_path).read_bytes()
-    try:
-        filaments = body.filament_presets or pick_filament_presets(
-            model_bytes,
-            (await _fetch_bundled_presets(db))["filament"],
-            system_printer_name(printer_ref, printer.model, printer_nozzle),
-        )
-    except ValueError as exc:
-        await db.commit()
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "code": "no_filament_preset",
-                "source_library_file_id": source.id,
-                "source_filename": source.filename,
-                "message": str(exc),
-            },
-        ) from exc
-    request = goto_slice_request(
-        model_bytes,
-        printer_ref,
-        process_ref,
-        filaments,
-        creator_settings=matched,
-        bed_type=printer.installed_bed_type,
-    )
-    # "Edit settings" on the preview: the user's picks replace the defaults.
-    if body.design_overrides is not None:
-        request.design_overrides = body.design_overrides
-    if body.process_overrides:
-        request.process_overrides = body.process_overrides
-
     cloud_token_user = current_user or api_key_cloud_owner
     user_id = cloud_token_user.id if cloud_token_user else None
     printer_id = printer.id
-    folder_id = source.folder_id
-    source_id = source.id
-    model_filename = source.filename
-    notice = None if matched else "creator_settings_not_used"
+    printer_model = printer.model
+    bed_type = printer.installed_bed_type
 
     async def _run(job_id: int) -> dict:
+        # Everything slow happens here, not in the request: on a phone a
+        # request held open through a MakerWorld download can drop silently,
+        # leaving the page waiting on an answer that never comes.
         async with async_session() as task_db:
+            service = await _build_service(task_db, provider, current_user, api_key_cloud_owner)
+            try:
+                resolved = await service.resolve(ref)
+            except ProviderError as exc:
+                raise http_exception_to_job_error(_map_service_error(exc)) from exc
+            finally:
+                await service.close()
+
+            instance_id, matched = select_profile(
+                resolved.instances, printer_model, printer_nozzle, int(ref.sub_id) if ref.sub_id else None
+            )
+            if instance_id is None:
+                raise http_exception_to_job_error(
+                    HTTPException(status_code=404, detail="This model has no downloadable print profile")
+                )
+            try:
+                imported = await import_instance(
+                    MakerWorldImportRequest(
+                        model_id=int(ref.external_id), source_type=provider.source_type, instance_id=instance_id
+                    ),
+                    db=task_db,
+                    credentials=credentials,
+                    x_api_key=x_api_key,
+                    api_key_cloud_owner=api_key_cloud_owner,
+                )
+            except HTTPException as exc:
+                raise http_exception_to_job_error(exc) from exc
+            source = await task_db.get(LibraryFile, imported.library_file_id)
+            file_nozzle = (source.file_metadata or {}).get("nozzle_diameter")
+            if matched and file_nozzle and printer_nozzle and abs(float(file_nozzle) - printer_nozzle) > 1e-3:
+                matched = False  # made for this model, but for another nozzle
+            model_bytes = (Path(app_settings.base_dir) / source.file_path).read_bytes()
+            handover = {
+                "printer_id": printer_id,
+                "source_library_file_id": source.id,
+                "source_filename": source.filename,
+                "plates": [],
+            }
+            try:
+                filaments = body.filament_presets or pick_filament_presets(
+                    model_bytes,
+                    (await _fetch_bundled_presets(task_db))["filament"],
+                    system_printer_name(printer_ref, printer_model, printer_nozzle),
+                )
+            except ValueError as exc:
+                return {**handover, "block": "no_filament_preset", "block_detail": str(exc)}
+            request = goto_slice_request(
+                model_bytes,
+                printer_ref,
+                process_ref,
+                filaments,
+                creator_printer=matched,
+                bed_type=bed_type,
+            )
+            # "Edit settings" on the preview: the user's picks replace the defaults.
+            if body.design_overrides is not None:
+                request.design_overrides = body.design_overrides
+            if body.process_overrides:
+                request.process_overrides = body.process_overrides
+
             try:
                 sliced = await slice_and_persist(
                     task_db,
                     model_bytes=model_bytes,
-                    model_filename=model_filename,
-                    folder_id=folder_id,
-                    extra_metadata={"sliced_from_library_file_id": source_id},
+                    model_filename=source.filename,
+                    folder_id=source.folder_id,
+                    extra_metadata={"sliced_from_library_file_id": source.id},
                     request=request,
                     current_user_id=user_id,
                     job_id=job_id,
@@ -651,14 +652,7 @@ async def start_print_flow(
             except HTTPException as exc:
                 if is_bed_overflow(str(exc.detail)):
                     # Never scaled: hand the unsliced model to the Slice dialog.
-                    return {
-                        "block": "bed_overflow",
-                        "block_detail": str(exc.detail),
-                        "printer_id": printer_id,
-                        "source_library_file_id": source_id,
-                        "source_filename": model_filename,
-                        "plates": [],
-                    }
+                    return {**handover, "block": "bed_overflow", "block_detail": str(exc.detail)}
                 raise http_exception_to_job_error(exc) from exc
             out_file = await task_db.get(LibraryFile, sliced.library_file_id)
             plates = await plate_mappings(
@@ -667,9 +661,10 @@ async def start_print_flow(
         return {
             **sliced.model_dump(),
             "printer_id": printer_id,
-            "source_library_file_id": source_id,
-            "profile_id": profile_id,
-            "notice": notice,
+            "source_library_file_id": source.id,
+            "profile_id": imported.profile_id,
+            "matched_profile": matched,
+            "notice": None if matched else "creator_printer_settings_not_used",
             # What the preview's settings editor starts from.
             "process_preset": process_ref.model_dump(),
             "design_overrides": request.design_overrides or [],
@@ -685,20 +680,10 @@ async def start_print_flow(
             ],
         }
 
-    # The job writes from its own session; don't leave this request's
-    # transaction (the import's folder/row writes) open underneath it.
-    await db.commit()
     job = await slice_dispatch.enqueue(
-        kind="library_file", source_id=source_id, source_name=model_filename, owner_id=user_id, run=_run
+        kind="library_file", source_id=0, source_name=body.url, owner_id=user_id, run=_run
     )
-    return {
-        "job_id": job.id,
-        "status_url": f"/api/v1/slice-jobs/{job.id}",
-        "printer_id": printer_id,
-        "profile_id": profile_id,
-        "source_library_file_id": source_id,
-        "matched_profile": matched,
-    }
+    return {"job_id": job.id, "status_url": f"/api/v1/slice-jobs/{job.id}", "printer_id": printer_id}
 
 
 @router.get("/recent-imports", response_model=list[MakerWorldRecentImport])

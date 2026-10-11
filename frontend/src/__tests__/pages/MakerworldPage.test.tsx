@@ -382,7 +382,7 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
       http.post('*/makerworld/print', async ({ request }) => {
         printBodies.push((await request.json()) as Record<string, unknown>);
         return HttpResponse.json(
-          { job_id: 41, status_url: '/api/v1/slice-jobs/41', printer_id: 3, profile_id: 298919564, source_library_file_id: 7, matched_profile: true },
+          { job_id: 41, status_url: '/api/v1/slice-jobs/41', printer_id: 3 },
           { status: 202 },
         );
       }),
@@ -541,7 +541,7 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
           );
         }
         return HttpResponse.json(
-          { job_id: 41, status_url: '', printer_id: 3, profile_id: 1, source_library_file_id: 7, matched_profile: true },
+          { job_id: 41, status_url: '', printer_id: 3 },
           { status: 202 },
         );
       }),
@@ -555,12 +555,12 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
   });
 
   it('says when the creator settings were not used', async () => {
-    printNotice = 'creator_settings_not_used';
+    printNotice = 'creator_printer_settings_not_used';
     usePrintFlowHandlers([]);
     window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
     render(<MakerworldPage />);
 
-    expect(await screen.findByText(/without the creator's settings/)).toBeInTheDocument();
+    expect(await screen.findByText(/without their printer-specific ones/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument();
   });
 

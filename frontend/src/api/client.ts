@@ -2113,9 +2113,6 @@ export interface MakerworldPrintStart {
   job_id: number;
   status_url: string;
   printer_id: number;
-  profile_id: number;
-  source_library_file_id: number;
-  matched_profile: boolean;
 }
 
 /** Why a plate (or the whole flow) hands over to an existing dialog. */
@@ -2123,7 +2120,8 @@ export type MakerworldPrintBlock =
   | 'too_many_filaments'
   | 'filament_unmatched'
   | 'filament_ambiguous'
-  | 'bed_overflow';
+  | 'bed_overflow'
+  | 'no_filament_preset';
 
 /** One sliced plate in a MakerWorld print-flow result: the AMS mapping the
  *  queue would use, or why it must go to the Print dialog instead. */
@@ -2140,9 +2138,11 @@ export interface MakerworldPrintResult extends SliceResponse {
   profile_id: number;
   /** Set when the MakerWorld profile wasn't made for this printer: sliced
    *  with the go-to profile only, arranged for this bed. */
-  notice?: 'creator_settings_not_used' | null;
+  notice?: 'creator_printer_settings_not_used' | null;
+  /** The MakerWorld profile was made for this printer and nozzle. */
+  matched_profile?: boolean;
   /** Whole-flow hand-over (nothing sliced): the model doesn't fit the bed. */
-  block?: 'bed_overflow';
+  block?: 'bed_overflow' | 'no_filament_preset';
   block_detail?: string;
   source_filename?: string;
   /** The go-to process preset and the creator's settings carried — what

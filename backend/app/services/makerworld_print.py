@@ -206,13 +206,17 @@ def goto_slice_request(
     process_ref: PresetRef,
     filaments: list[PresetRef],
     *,
-    creator_settings: bool,
+    creator_printer: bool,
     bed_type: str | None,
 ) -> SliceRequest:
-    """Slice with the go-to presets. With ``creator_settings`` (the MakerWorld
-    profile was made for this printer) every process setting the creator
-    changed is carried on top; without, none are, and the slicer arranges the
-    objects for this bed — the layout was made for another one."""
+    """Slice with the go-to presets plus the creator's changed process
+    settings. With ``creator_printer`` (the MakerWorld profile was made for
+    this printer and nozzle) all of them are carried. Otherwise only the
+    design ones (walls, infill, supports, …): the printer-specific ones
+    (speeds, accelerations, temperatures, prime tower) and the layer height
+    that defines the go-to process are left to the go-to preset, and the
+    slicer arranges the objects for this bed — the layout was made for
+    another one."""
     from backend.app.services.design_settings import extract_design_process_overrides
 
     colours = [
@@ -224,8 +228,12 @@ def goto_slice_request(
         process_preset=process_ref,
         filament_presets=filaments,
         filament_colours=colours[: len(filaments)],
-        design_overrides=[o.key for o in extract_design_process_overrides(model_bytes)] if creator_settings else [],
-        auto_arrange=not creator_settings,
+        design_overrides=[
+            o.key
+            for o in extract_design_process_overrides(model_bytes)
+            if creator_printer or not (o.printer_coupled or o.preset_defining)
+        ],
+        auto_arrange=not creator_printer,
         bed_type=bed_type,
         plate=0,
         export_3mf=True,
