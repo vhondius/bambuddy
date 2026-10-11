@@ -1,0 +1,12 @@
+<resources>
+    <!-- MakerWorld's own palette (its MUI colorSystem tokens), light mode;
+         values-night holds the dark ones. -->
+    <color name="mw_bg_top">#FFFFFF</color>
+    <color name="mw_bg_base">#F7F7F7</color>
+    <color name="mw_text">#1F1F1F</color>
+    <color name="mw_text_secondary">#757575</color>
+    <color name="mw_primary">#00B800</color>
+    <!-- Unselected bottom-bar icons. -->
+    <color name="nav_icon_idle">@color/mw_text_secondary</color>
+    <color name="launcher_background">#2E9E52</color>
+</resources>

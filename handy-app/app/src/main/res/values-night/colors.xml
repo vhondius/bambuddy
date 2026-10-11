@@ -1,0 +1,8 @@
+<resources>
+    <color name="mw_bg_top">#2E2E2E</color>
+    <color name="mw_bg_base">#1C1C1C</color>
+    <color name="mw_text">#F5F5F5</color>
+    <color name="mw_text_secondary">#919EAB</color>
+    <color name="mw_primary">#08BF08</color>
+    <color name="nav_icon_idle">#FFFFFF</color>
+</resources>

@@ -53,6 +53,89 @@
 
 ---
 
+## Bambuddy Handy (this fork)
+
+This is a fork of [maziggy/bambuddy](https://github.com/maziggy/bambuddy). The
+`makerworld-print` branch adds **one-tap printing from a MakerWorld link** and a
+companion Android app, **Bambuddy Handy**, that works like Bambu Handy but
+against your own Bambuddy. Everything below this section is upstream's README.
+
+### Run it
+
+- Image: `ghcr.io/vhondius/bambuddy:handy`, rebuilt by GitHub Actions
+  (`.github/workflows/handy-image.yml`) on every push to `makerworld-print`;
+  each build is also tagged `:sha-<commit>` for rollback.
+- Stack: [`deploy/handy/compose.yaml`](deploy/handy/compose.yaml) runs this
+  image plus the OrcaSlicer sidecar (`orca-slicer-api` on `127.0.0.1:3003`).
+  Paste it into Dockge (or `docker compose up -d`); **Update** pulls new builds.
+- Then in Bambuddy: *Settings → Slicer*: OrcaSlicer, **Use Slicer API** on,
+  URL `http://127.0.0.1:3003`; sign in to Bambu Cloud (MakerWorld downloads
+  need it); and give each printer a **go-to print profile** (printer + process
+  preset and the installed build plate) in its printer settings.
+
+### One-tap print: `/makerworld?url=<MakerWorld link>`
+
+Open Bambuddy at `/makerworld?url=…` with any MakerWorld model link (the
+`#profileId-…` part picks the print profile); `?printer=<id>` skips the printer
+choice. The flow then runs on its own:
+
+1. **Download and slice** in the background: the request returns a job at once,
+   and progress arrives over the WebSocket (`slice_job_updated`), with polling
+   as a fallback.
+2. **Profile choice:** the profile made for your printer model and nozzle if
+   there is one. Otherwise the printer's go-to profile is used and the model is
+   auto-arranged; the creator's design settings (walls, infill, supports, …) are
+   kept, and only their printer-specific ones (speeds, temperatures, layer
+   height) are left out. The creator's machine G-code never runs.
+3. **Filaments:** each used plate slot gets the filament preset of the spool the
+   AMS will feed it, using the same matcher as the print scheduler.
+4. **Preview:** plate thumbnail, print time, grams per slot, plate type, and
+   G-code preview inside the flow. **Edit settings** changes process settings and
+   per-slot filaments, then re-slices.
+5. **Print:** the normal Print dialog, with the AMS mapping filled in.
+
+When something needs a person — a filament the AMS doesn't have, a model too big
+for the plate, no go-to profile, slicer unreachable, a paid or points-locked
+model, an expired Bambu login — the flow says why and hands over to the Slice or
+Print dialog instead of guessing. Nothing is ever scaled.
+
+The flow's downloaded 3MF and its sliced file are deleted after an hour (unless
+queued), so repeated tries don't clutter the library.
+
+### Other changes in this fork
+
+- **Slice dialog:** finds presets for edited printer copies
+  (`… 0.4 nozzle - Edited`), starts from the printer's go-to profile when exactly
+  one is set, and has type-to-search for long preset lists.
+- **MakerWorld import:** downloads by instance id (the link's `profileId` is not
+  the download id), flags plates MakerWorld doesn't allow downloading, and shows
+  Bambu's own message when a download is refused.
+- **Stale builds:** a tab left open across an update reloads into the new build
+  instead of hanging on a missing chunk.
+- **Inside the app** (recognised by its user-agent marker): MakerWorld's colour
+  palette and the app's light/dark setting; on the app's Printer tab, no
+  sidebar or header.
+
+### The Android app: [`handy-app/`](handy-app/)
+
+A sideloaded Kotlin WebView app with four tabs in a slim bar styled after
+MakerWorld:
+
+- **MakerWorld:** makerworld.com with a **Print with Bambuddy** button on model
+  pages; sharing a MakerWorld link to the app does the same.
+- **Printer:** Bambuddy's printers page on its own — live status, progress,
+  AMS, camera.
+- **Bambuddy:** the one-tap print flow. Back steps out of it layer by layer,
+  and closing it returns to MakerWorld. With no flow open it shows "Nothing to
+  print yet" and an **Open Bambuddy** button.
+- **Settings:** the Bambuddy address (with a connection test) and Appearance
+  (System / Light / Dark).
+
+Plain `http://` is only allowed to the configured Bambuddy host. Build and
+install steps are in [`handy-app/README.md`](handy-app/README.md).
+
+---
+
 > [!IMPORTANT]
 > **H2-series and P2S owners — how you send a print decides what gets archived.**
 > Bambu Studio's **Print** button sends sliced files to the printer's internal memory, which Bambuddy cannot read — so those prints archive with a name and timing but no thumbnail, filament total or cost. The printer's "Store sent files on external storage" option does not change it (measured on an H2C and an H2D with it enabled); [BambuStudio#10481](https://github.com/bambulab/BambuStudio/issues/10481) tracks the default upstream.

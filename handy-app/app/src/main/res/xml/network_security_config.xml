@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext is allowed here because the Bambuddy address is a setting, not
+     something known at build time, and a network security config can't name a
+     host chosen at runtime. The restriction is enforced in code instead:
+     MainActivity blocks every http:// request whose host isn't the configured
+     Bambuddy host, in both WebViews. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

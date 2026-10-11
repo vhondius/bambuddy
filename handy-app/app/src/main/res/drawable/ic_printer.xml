@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 3D printer line icon, pre-coloured per state (Material clears icon tints). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_printer_on" android:state_checked="true" />
+    <item android:drawable="@drawable/ic_printer_off" />
+</selector>

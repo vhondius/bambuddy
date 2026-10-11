@@ -1,0 +1,13 @@
+<resources>
+    <style name="Theme.BambuddyHandy" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/mw_primary</item>
+        <item name="colorSecondary">@color/mw_primary</item>
+        <item name="colorSurface">@color/mw_bg_top</item>
+        <item name="colorOnSurface">@color/mw_text</item>
+        <item name="colorOnSurfaceVariant">@color/mw_text_secondary</item>
+        <item name="android:colorBackground">@color/mw_bg_base</item>
+        <item name="android:windowBackground">@color/mw_bg_base</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+    </style>
+</resources>

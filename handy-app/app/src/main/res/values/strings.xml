@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">Bambuddy Handy</string>
+    <string name="tab_makerworld">MakerWorld</string>
+    <string name="tab_printer">Printer</string>
+    <string name="tab_bambuddy">Bambuddy</string>
+    <string name="empty_title">Nothing to print yet</string>
+    <string name="empty_body">Tap Print with Bambuddy on a MakerWorld model, or share a MakerWorld link to this app.</string>
+    <string name="open_bambuddy">Open Bambuddy</string>
+    <string name="settings">Settings</string>
+    <string name="theme_label">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="base_url_label">Bambuddy address</string>
+    <string name="base_url_hint">http://192.168.1.10:8000</string>
+    <string name="base_url_help">The address you open Bambuddy at in a browser. Use the server\'s VPN or LAN address.</string>
+    <string name="save">Save</string>
+    <string name="test_connection">Test connection</string>
+    <string name="testing">Testing…</string>
+    <string name="test_ok">Connected to Bambuddy.</string>
+    <string name="test_failed">Bambuddy unreachable — is the VPN on?\n%1$s</string>
+    <string name="invalid_url">Enter an address starting with http:// or https://</string>
+    <string name="saved">Saved</string>
+    <string name="set_address_first">Set the Bambuddy address first.</string>
+    <string name="no_makerworld_link">No MakerWorld link found in the shared text.</string>
+    <string name="blocked_cleartext">Blocked an insecure (http) link to %1$s</string>
+</resources>
