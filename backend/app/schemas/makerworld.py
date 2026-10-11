@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from backend.app.schemas.slicer import PresetRef
 
@@ -71,6 +71,10 @@ class MakerWorldImportRequest(BaseModel):
         ),
     )
     folder_id: int | None = Field(default=None, description="Target library folder; null = root")
+
+    # Set only by the one-tap print flow, never from JSON: its downloads are
+    # temporary, and a regular import of the same plate adopts them.
+    _print_flow: bool = PrivateAttr(default=False)
 
 
 class MakerWorldRecentImport(BaseModel):

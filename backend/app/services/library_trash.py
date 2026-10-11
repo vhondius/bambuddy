@@ -131,6 +131,10 @@ class LibraryTrashService:
                 async with async_session() as db:
                     await self._sweep(db)
                     await self._maybe_run_auto_purge(db)
+                    # MakerWorld one-tap print downloads and slices, an hour on.
+                    from backend.app.services.makerworld_print import sweep_print_flow_files
+
+                    await sweep_print_flow_files(db)
             except asyncio.CancelledError:
                 break
             except Exception as e:  # pragma: no cover - defensive

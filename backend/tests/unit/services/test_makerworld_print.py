@@ -176,6 +176,43 @@ class TestAmsFilamentPick:
             assert [p.id for p in picked] == ["Bambu PLA Basic @BBL X2D"]
 
 
+class TestPrintFlowCleanUp:
+    @pytest.mark.asyncio
+    async def test_sweeps_old_flow_files_but_not_the_users_or_queued_ones(self, db_session):
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import select
+
+        from backend.app.models.library import LibraryFile
+        from backend.app.models.print_queue import PrintQueueItem
+        from backend.app.services.makerworld_print import sweep_print_flow_files
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        def row(name, marked, age):
+            return LibraryFile(
+                filename=name,
+                file_path=f"library/{name}",
+                file_type="3mf",
+                file_size=1,
+                file_metadata={"makerworld_print_flow": True} if marked else {},
+                created_at=now - age,
+            )
+
+        old_flow = row("old-flow.3mf", True, timedelta(hours=2))
+        new_flow = row("new-flow.3mf", True, timedelta(minutes=10))
+        users = row("users.3mf", False, timedelta(days=3))
+        queued = row("queued.gcode.3mf", True, timedelta(hours=2))
+        db_session.add_all([old_flow, new_flow, users, queued])
+        await db_session.commit()
+        db_session.add(PrintQueueItem(library_file_id=queued.id, status="pending"))
+        await db_session.commit()
+
+        assert await sweep_print_flow_files(db_session) == 1
+        left = {r.filename for r in (await db_session.execute(select(LibraryFile))).scalars()}
+        assert left == {"new-flow.3mf", "users.3mf", "queued.gcode.3mf"}
+
+
 class TestSelectProfile:
     @pytest.mark.asyncio
     async def test_picks_instance_made_for_printer_and_nozzle(self):
@@ -348,6 +385,7 @@ class TestPrintRoute:
             from backend.app.models.library import LibraryFile
 
             state["request"] = kw["request"]
+            state["extra_metadata"] = kw["extra_metadata"]
             if state["slice_error"]:
                 raise HTTPException(status_code=500, detail=state["slice_error"])
             out = tmp_path / "sliced.gcode.3mf"
@@ -394,6 +432,35 @@ class TestPrintRoute:
 
     async def _start(self, client, url="https://makerworld.com/en/models/40146", **extra):
         return await client.post("/api/v1/makerworld/print", json={"url": url, **extra})
+
+    @pytest.mark.asyncio
+    async def test_downloads_and_slices_are_marked_for_clean_up(self, async_client, db_session, printer, flow):
+        from backend.app.models.library import LibraryFile
+
+        resp = await self._start(async_client)
+        job = await self._finish(async_client, resp.json()["job_id"])
+        result = job["result"]
+        source = await db_session.get(LibraryFile, result["source_library_file_id"])
+        await db_session.refresh(source)
+        assert source.file_metadata.get("makerworld_print_flow") is True
+        # slice_and_persist writes extra_metadata into the sliced file's row.
+        assert flow[1]["extra_metadata"]["makerworld_print_flow"] is True
+
+    @pytest.mark.asyncio
+    async def test_a_regular_import_keeps_a_plate_the_flow_downloaded(self, async_client, db_session, printer, flow):
+        from backend.app.models.library import LibraryFile
+
+        resp = await self._start(async_client)
+        job = await self._finish(async_client, resp.json()["job_id"])
+        source_id = job["result"]["source_library_file_id"]
+        imp = await async_client.post(
+            "/api/v1/makerworld/import", json={"model_id": 40146, "source_type": "makerworld", "instance_id": A1}
+        )
+        assert imp.status_code == 200, imp.text
+        assert imp.json()["library_file_id"] == source_id
+        source = await db_session.get(LibraryFile, source_id)
+        await db_session.refresh(source)
+        assert "makerworld_print_flow" not in source.file_metadata
 
     @pytest.mark.asyncio
     async def test_matching_profile_slices_goto_presets_plus_creator_changes(self, async_client, printer, flow):

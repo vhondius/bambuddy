@@ -14,7 +14,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 vi.mock('../../components/GcodeToolpathViewer', () => ({
   GcodeToolpathViewer: ({ gcodeUrl }: { gcodeUrl: string }) => <div data-testid="gcode-viewer">{gcodeUrl}</div>,
 }));
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { render } from '../utils';
@@ -549,6 +549,40 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
       render(<MakerworldPage />);
       await screen.findByRole('button', { name: 'Print' });
       await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+      expect(closeFlow).toHaveBeenCalledOnce();
+    } finally {
+      delete window.BambuddyHandyApp;
+    }
+  });
+
+  it("steps the app's Back button out of the flow one layer at a time", async () => {
+    const closeFlow = vi.fn();
+    window.BambuddyHandyApp = { closeFlow };
+    try {
+      usePrintFlowHandlers([]);
+      window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+      render(<MakerworldPage />);
+      const user = userEvent.setup();
+
+      await user.click(await screen.findByRole('button', { name: 'G-code preview' }));
+      expect(screen.getByTestId('gcode-viewer')).toBeInTheDocument();
+      act(() => {
+        expect(window.BambuddyHandyBack?.()).toBe(true);
+      });
+      expect(screen.queryByTestId('gcode-viewer')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Edit settings' }));
+      await screen.findByRole('button', { name: 'Save & re-slice' });
+      act(() => {
+        window.BambuddyHandyBack?.();
+      });
+      expect(await screen.findByRole('button', { name: 'Print' })).toBeInTheDocument();
+      expect(closeFlow).not.toHaveBeenCalled();
+
+      act(() => {
+        window.BambuddyHandyBack?.();
+      });
       expect(closeFlow).toHaveBeenCalledOnce();
     } finally {
       delete window.BambuddyHandyApp;

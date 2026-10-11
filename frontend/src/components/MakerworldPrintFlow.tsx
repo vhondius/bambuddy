@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,8 @@ declare global {
   interface Window {
     /** Set by the Bambuddy Handy Android app. */
     BambuddyHandyApp?: { closeFlow: () => void };
+    /** Called by the app's Back button; true when the flow handled it. */
+    BambuddyHandyBack?: () => boolean;
   }
 }
 
@@ -91,6 +93,29 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
     onClose();
     window.BambuddyHandyApp?.closeFlow();
   };
+  // The G-code preview opens over the flow rather than on Bambuddy's viewer
+  // page, so leaving it comes back here instead of into the rest of the app.
+  const [showGcode, setShowGcode] = useState(false);
+
+  // The app's Back button steps out of the flow one layer at a time — the
+  // G-code preview, a hand-over dialog, the settings editor — and only then
+  // closes it, instead of walking the page history into the rest of
+  // Bambuddy. The app asks through this hook and falls back to its own Back
+  // when it is absent or returns false.
+  const backRef = useRef<() => boolean>(() => false);
+  backRef.current = () => {
+    if (showGcode) setShowGcode(false);
+    else if (openDialog) setOpenDialog(null);
+    else if (step.kind === 'editSettings') setStep({ kind: 'preview', result: step.result });
+    else closeFlow();
+    return true;
+  };
+  useEffect(() => {
+    window.BambuddyHandyBack = () => backRef.current();
+    return () => {
+      delete window.BambuddyHandyBack;
+    };
+  }, []);
   // Kept across re-slices so a second edit starts from the first one.
   const [edits, setEdits] = useState<Edits | null>(null);
   const handOver = (h: Handover) => {
@@ -268,6 +293,8 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
               result={step.result}
               onHandOver={handOver}
               onEditSettings={() => setStep({ kind: 'editSettings', result: step.result })}
+              showGcode={showGcode}
+              setShowGcode={setShowGcode}
               onDone={() => {
                 showToast(t('makerworld.printFlow.queued'), 'success');
                 onClose();
@@ -276,15 +303,15 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
           )}
         </div>
       </div>
-      {openDialog?.to === 'slice' && <SliceModal source={openDialog.source} onClose={onClose} />}
+      {openDialog?.to === 'slice' && <SliceModal source={openDialog.source} onClose={() => setOpenDialog(null)} />}
       {openDialog?.to === 'print' && (
         <PrintModal
           mode="create"
           libraryFileId={openDialog.libraryFileId}
           archiveName={openDialog.name}
           initialSelectedPrinterIds={[openDialog.printerId]}
-          onClose={onClose}
-          onSuccess={onClose}
+          onClose={() => setOpenDialog(null)}
+          onSuccess={closeFlow}
         />
       )}
     </div>
@@ -314,19 +341,20 @@ function Preview({
   onDone,
   onHandOver,
   onEditSettings,
+  showGcode,
+  setShowGcode,
 }: {
   result: MakerworldPrintResult;
   onDone: () => void;
   onHandOver: (h: Handover) => void;
   onEditSettings: () => void;
+  showGcode: boolean;
+  setShowGcode: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [plateIdx, setPlateIdx] = useState(0);
   const [queueing, setQueueing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The G-code preview opens over the flow rather than on Bambuddy's viewer
-  // page, so leaving it comes back here instead of into the rest of the app.
-  const [showGcode, setShowGcode] = useState(false);
 
   const { data: platesData } = useQuery({
     queryKey: ['library-file-plates', result.library_file_id],

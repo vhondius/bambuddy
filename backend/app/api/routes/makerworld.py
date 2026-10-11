@@ -50,6 +50,7 @@ from backend.app.schemas.makerworld import (
     MakerWorldResolveRequest,
     MakerWorldStatus,
 )
+from backend.app.services.makerworld_print import PRINT_FLOW_MARK, is_print_flow_file
 from backend.app.services.model_providers import makerworld_provider, registry
 from backend.app.services.model_providers.base import (
     ModelProvider,
@@ -399,6 +400,12 @@ async def import_instance(
         existing_q = await db.execute(LibraryFile.active().where(LibraryFile.source_url == source_url).limit(1))
         existing_row = existing_q.scalar_one_or_none()
         if existing_row is not None:
+            if not body._print_flow and is_print_flow_file(existing_row):
+                # The user imports a plate the print flow fetched: keep it.
+                existing_row.file_metadata = {
+                    k: v for k, v in existing_row.file_metadata.items() if k != PRINT_FLOW_MARK
+                }
+                await db.commit()
             return MakerWorldImportResponse(
                 library_file_id=existing_row.id,
                 filename=existing_row.filename,
@@ -594,11 +601,13 @@ async def start_print_flow(
                 raise http_exception_to_job_error(
                     HTTPException(status_code=404, detail="This model has no downloadable print profile")
                 )
+            import_request = MakerWorldImportRequest(
+                model_id=int(ref.external_id), source_type=provider.source_type, instance_id=instance_id
+            )
+            import_request._print_flow = True
             try:
                 imported = await import_instance(
-                    MakerWorldImportRequest(
-                        model_id=int(ref.external_id), source_type=provider.source_type, instance_id=instance_id
-                    ),
+                    import_request,
                     db=task_db,
                     credentials=credentials,
                     x_api_key=x_api_key,
@@ -607,6 +616,10 @@ async def start_print_flow(
             except HTTPException as exc:
                 raise http_exception_to_job_error(exc) from exc
             source = await task_db.get(LibraryFile, imported.library_file_id)
+            if not imported.was_existing:
+                # Downloaded for this print only: swept an hour from now.
+                source.file_metadata = {**(source.file_metadata or {}), PRINT_FLOW_MARK: True}
+                await task_db.commit()
             file_nozzle = (source.file_metadata or {}).get("nozzle_diameter")
             if matched and file_nozzle and printer_nozzle and abs(float(file_nozzle) - printer_nozzle) > 1e-3:
                 matched = False  # made for this model, but for another nozzle
@@ -647,7 +660,7 @@ async def start_print_flow(
                     model_bytes=model_bytes,
                     model_filename=source.filename,
                     folder_id=source.folder_id,
-                    extra_metadata={"sliced_from_library_file_id": source.id},
+                    extra_metadata={"sliced_from_library_file_id": source.id, PRINT_FLOW_MARK: True},
                     request=request,
                     current_user_id=user_id,
                     job_id=job_id,

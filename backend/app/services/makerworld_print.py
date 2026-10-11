@@ -16,6 +16,7 @@ import io
 import json
 import re
 import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -336,3 +337,63 @@ def check_blocks(requirements: list[dict], loaded: list[dict], mapping: list[int
         if not same_colour:
             return "filament_ambiguous"
     return None
+
+
+# --- Clean-up -----------------------------------------------------------------
+
+# Files the flow creates (the downloaded 3MF, each sliced file) carry this in
+# their metadata and are deleted an hour later: a one-tap print shouldn't
+# leave the library full of copies. A plate already in the library is never
+# marked, and a regular import of a marked one unmarks it.
+PRINT_FLOW_MARK = "makerworld_print_flow"
+PRINT_FLOW_TTL = timedelta(hours=1)
+
+
+def is_print_flow_file(row) -> bool:
+    return bool((row.file_metadata or {}).get(PRINT_FLOW_MARK))
+
+
+async def sweep_print_flow_files(db: AsyncSession) -> int:
+    """Permanently delete print-flow files older than PRINT_FLOW_TTL, except
+    ones a queued or running print still uses. Returns how many went."""
+    from sqlalchemy import String, cast, select
+
+    from backend.app.models.library import LibraryFile
+    from backend.app.models.print_queue import PrintQueueItem
+    from backend.app.services.library_trash import library_trash_service
+
+    # created_at is the database's UTC "now", stored without a zone.
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - PRINT_FLOW_TTL
+    rows = (
+        (
+            await db.execute(
+                LibraryFile.active().where(
+                    LibraryFile.created_at < cutoff,
+                    cast(LibraryFile.file_metadata, String).contains(PRINT_FLOW_MARK),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    rows = [r for r in rows if is_print_flow_file(r)]
+    if not rows:
+        return 0
+    in_use = set(
+        (
+            await db.execute(
+                select(PrintQueueItem.library_file_id).where(
+                    PrintQueueItem.library_file_id.in_([r.id for r in rows]),
+                    PrintQueueItem.status.in_(("pending", "skipped", "printing")),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    deleted = 0
+    for row in rows:
+        if row.id not in in_use:
+            await library_trash_service.hard_delete_now(db, row)
+            deleted += 1
+    return deleted
