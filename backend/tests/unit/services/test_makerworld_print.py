@@ -97,6 +97,85 @@ def _bundled_filaments():
     ]
 
 
+def _ams_status(trays):
+    """A printer state with one AMS holding ``trays`` (type, colour, filament id)."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        raw_data={
+            "ams": [
+                {
+                    "id": 0,
+                    "tray": [
+                        {"id": i, "tray_type": t, "tray_color": c, "tray_info_idx": fid}
+                        for i, (t, c, fid) in enumerate(trays)
+                    ],
+                }
+            ]
+        },
+        nozzles=[],
+    )
+
+
+class TestAmsFilamentPick:
+    """The first slice uses the filament loaded in the AMS slot each project
+    slot will print from, not the creator's."""
+
+    def test_uses_the_loaded_spool_for_its_slot(self, tmp_path):
+        from backend.app.schemas.slicer_presets import UnifiedPreset
+        from backend.app.services.makerworld_print import ams_filament_names, pick_filament_presets
+
+        model = tmp_path / "seed.3mf"
+        model.write_bytes(_project_3mf())
+        status = _ams_status([("PETG", "000000FF", "GFG02"), ("PLA", "FF0000FF", "GFA01")])
+        names = ams_filament_names(model, status)
+        assert names == ["Bambu PLA Matte"]  # the red PLA slot, not the PETG
+        matte = UnifiedPreset(
+            id="Bambu PLA Matte @BBL X2D",
+            name="Bambu PLA Matte @BBL X2D",
+            source="standard",
+            filament_type="PLA",
+            compatible_printers=["Bambu Lab X2D 0.4 nozzle"],
+        )
+        picked = pick_filament_presets(
+            _project_3mf(), [*_bundled_filaments(), matte], "Bambu Lab X2D 0.4 nozzle", names
+        )
+        assert [p.id for p in picked] == ["Bambu PLA Matte @BBL X2D"]
+
+    def test_an_unused_slot_does_not_take_a_used_slots_spool(self, tmp_path):
+        """Two red PLA slots, only slot 2 printed, one red spool loaded: the
+        spool goes to slot 2. Matching every project slot gave it to slot 1."""
+        from backend.app.services.makerworld_print import ams_filament_names
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr(
+                "Metadata/project_settings.config",
+                json.dumps({"filament_type": ["PLA", "PLA"], "filament_colour": ["#FF0000", "#FF0000"]}),
+            )
+            zf.writestr(
+                "Metadata/slice_info.config",
+                '<config><plate><metadata key="index" value="1"/>'
+                '<filament id="2" type="PLA" color="#FF0000" used_g="12.5"/></plate></config>',
+            )
+        model = tmp_path / "two-slots.3mf"
+        model.write_bytes(buf.getvalue())
+        names = ams_filament_names(model, _ams_status([("PLA", "FF0000FF", "GFA01")]))
+        assert names == [None, "Bambu PLA Matte"]
+
+    def test_falls_back_to_the_creators_filament(self, tmp_path):
+        from backend.app.services.makerworld_print import ams_filament_names, pick_filament_presets
+
+        model = tmp_path / "seed.3mf"
+        model.write_bytes(_project_3mf())
+        # Nothing of the slot's material loaded, an unknown spool, no printer state.
+        for status in (_ams_status([("PETG", "FF0000FF", "GFG02")]), _ams_status([("PLA", "FF0000FF", "")]), None):
+            names = ams_filament_names(model, status)
+            assert names == [None]
+            picked = pick_filament_presets(_project_3mf(), _bundled_filaments(), "Bambu Lab X2D 0.4 nozzle", names)
+            assert [p.id for p in picked] == ["Bambu PLA Basic @BBL X2D"]
+
+
 class TestSelectProfile:
     @pytest.mark.asyncio
     async def test_picks_instance_made_for_printer_and_nozzle(self):

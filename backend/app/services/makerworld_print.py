@@ -166,10 +166,61 @@ def _as_list(value: Any) -> list:
     return value if isinstance(value, list) else [value] if value else []
 
 
-def pick_filament_presets(model_bytes: bytes, standard_filaments: list, printer_name: str | None) -> list[PresetRef]:
+def ams_filament_names(model_path: Path, status) -> list[str | None]:
+    """Per project filament slot, the name of the spool the AMS would feed it
+    ("Bambu PLA Matte"), or None. Matched with the print scheduler's own
+    matcher — the one the queue maps slots with at print time, so it never
+    crosses materials — and named from the spool's Bambu filament id. Spools
+    without a known id (third-party, custom presets) give None.
+
+    Only the filaments the file's plates use take part: the matcher hands each
+    spool to one slot, so an unused slot must not claim the spool a used one
+    needs. The file's slicing record says which are used (and, on dual-nozzle
+    printers, which nozzle each feeds); a file without one falls back to every
+    project slot."""
+    from backend.app.api.routes.cloud import _BUILTIN_FILAMENT_NAMES
+    from backend.app.services.filament_requirements import extract_filament_requirements
+    from backend.app.services.print_scheduler import scheduler
+
+    config = _project_settings(model_path.read_bytes())
+    types = [str(t) for t in _as_list(config.get("filament_type"))]
+    names: list[str | None] = [None] * len(types)
+    loaded = scheduler._build_loaded_filaments(status) if status else []
+    if not types or not loaded:
+        return names
+    required = extract_filament_requirements(model_path)
+    if not required:
+        colours = [str(c) for c in _as_list(config.get("filament_colour"))]
+        ids = [str(i) for i in _as_list(config.get("filament_ids"))]
+        required = [
+            {
+                "slot_id": i + 1,
+                "type": t,
+                "color": colours[i] if i < len(colours) else "",
+                "tray_info_idx": ids[i] if i < len(ids) else "",
+            }
+            for i, t in enumerate(types)
+        ]
+    fts = bool(getattr(getattr(status, "fila_switch", None), "installed", False))
+    mapping = scheduler._match_filaments_to_slots(required, loaded, fts_installed=fts) or []
+    trays = {f["global_tray_id"]: f for f in loaded}
+    for i, tray_id in enumerate(mapping[: len(names)]):
+        tray = trays.get(tray_id)
+        if tray:
+            names[i] = _BUILTIN_FILAMENT_NAMES.get(tray.get("tray_info_idx") or "")
+    return names
+
+
+def pick_filament_presets(
+    model_bytes: bytes,
+    standard_filaments: list,
+    printer_name: str | None,
+    ams_names: list[str | None] | None = None,
+) -> list[PresetRef]:
     """One standard filament preset per project filament slot, for the
-    target printer: the creator's own preset re-targeted ("Bambu PLA Basic
-    @BBL A1" → "Bambu PLA Basic @BBL X2D"), else a preset of the slot's
+    target printer: the filament loaded in the AMS slot it will print from
+    (``ams_names``), else the creator's own preset re-targeted ("Bambu PLA
+    Basic @BBL A1" → "Bambu PLA Basic @BBL X2D"), else a preset of the slot's
     material, Bambu before Generic.
 
     # ponytail: standard tier only and a name/material heuristic; port the
@@ -187,8 +238,11 @@ def pick_filament_presets(model_bytes: bytes, standard_filaments: list, printer_
     picked: list[PresetRef] = []
     for i in range(max(len(names), len(types), 1)):
         base = names[i].split(" @")[0] if i < len(names) else ""
+        loaded = ams_names[i] if ams_names and i < len(ams_names) else None
         ftype = (types[i] if i < len(types) else "PLA").upper()
-        same_name = [p for p in compatible if base and p.name.split(" @")[0] == base]
+        same_name = [p for p in compatible if loaded and p.name.split(" @")[0] == loaded] or [
+            p for p in compatible if base and p.name.split(" @")[0] == base
+        ]
         same_type = sorted(
             (p for p in compatible if (p.filament_type or "").upper() == ftype),
             key=lambda p: (not p.name.startswith("Bambu "), not p.name.startswith("Generic "), p.name),

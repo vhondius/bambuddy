@@ -515,6 +515,7 @@ async def start_print_flow(
     from backend.app.core.config import settings as app_settings
     from backend.app.core.database import async_session
     from backend.app.services.makerworld_print import (
+        ams_filament_names,
         check_blocks,
         goto_presets,
         goto_slice_request,
@@ -609,7 +610,8 @@ async def start_print_flow(
             file_nozzle = (source.file_metadata or {}).get("nozzle_diameter")
             if matched and file_nozzle and printer_nozzle and abs(float(file_nozzle) - printer_nozzle) > 1e-3:
                 matched = False  # made for this model, but for another nozzle
-            model_bytes = (Path(app_settings.base_dir) / source.file_path).read_bytes()
+            model_path = Path(app_settings.base_dir) / source.file_path
+            model_bytes = model_path.read_bytes()
             handover = {
                 "printer_id": printer_id,
                 "source_library_file_id": source.id,
@@ -621,6 +623,7 @@ async def start_print_flow(
                     model_bytes,
                     (await _fetch_bundled_presets(task_db))["filament"],
                     system_printer_name(printer_ref, printer_model, printer_nozzle),
+                    ams_filament_names(model_path, printer_manager.get_status(printer_id)),
                 )
             except ValueError as exc:
                 return {**handover, "block": "no_filament_preset", "block_detail": str(exc)}
