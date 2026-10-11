@@ -7574,6 +7574,7 @@ export default {
   makerworld: {
     notDownloadable: "Старий стіл: MakerWorld дозволяє завантажити його лише на своєму сайті.",
     printFlow: {
+      jobLost: "На сервері більше немає цього завдання (перезапуск або воно застаре). Спробуйте ще раз.",
       filamentSlot: "Філамент {{n}}",
       editSettings: "Змінити налаштування",
       saveAndReslice: "Зберегти й перенарізати",

@@ -7470,6 +7470,7 @@ export default {
   makerworld: {
     notDownloadable: "Eski plaka: MakerWorld bunu yalnızca kendi web sitesinde indirmeye sunuyor.",
     printFlow: {
+      jobLost: "Sunucuda bu iş artık yok (yeniden başlatıldı veya çok eski). Tekrar dene.",
       filamentSlot: "Filament {{n}}",
       editSettings: "Ayarları düzenle",
       saveAndReslice: "Kaydet ve yeniden dilimle",

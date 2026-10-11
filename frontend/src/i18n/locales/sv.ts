@@ -7582,6 +7582,7 @@ errors: {
   makerworld: {
     notDownloadable: "Äldre platta: MakerWorld erbjuder den bara för nedladdning på sin egen webbplats.",
     printFlow: {
+      jobLost: "Servern har inte längre det här jobbet (omstart, eller för gammalt). Försök igen.",
       filamentSlot: "Filament {{n}}",
       editSettings: "Redigera inställningar",
       saveAndReslice: "Spara och slica om",

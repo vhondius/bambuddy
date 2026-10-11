@@ -507,6 +507,20 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
     });
   });
 
+  it('says so instead of waiting forever when the server no longer has the job', async () => {
+    usePrintFlowHandlers([]);
+    server.use(
+      http.get('*/slice-jobs/99', () =>
+        HttpResponse.json({ detail: 'Slice job not found or expired' }, { status: 404 }),
+      ),
+    );
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}&job=99`);
+    render(<MakerworldPage />);
+
+    expect(await screen.findByText(/no longer has this print job/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
   it('puts back a #profileId that an unencoded link left in the page hash', async () => {
     const bodies: Array<Record<string, unknown>> = [];
     usePrintFlowHandlers(bodies);

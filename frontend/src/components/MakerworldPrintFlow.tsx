@@ -159,7 +159,21 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
     window.addEventListener('bambuddy:slice-job', onEvent);
     // One fetch covers a job that finished before the listener was attached;
     // the slow poll only matters when the WebSocket is down.
-    const poll = () => api.getSliceJob(jobId).then(apply).catch(() => undefined);
+    const poll = () =>
+      api
+        .getSliceJob(jobId)
+        .then(apply)
+        .catch((err) => {
+          // Gone (the server restarted, or it finished long ago): say so
+          // instead of waiting forever. Other errors are retried by the poll.
+          if (err instanceof ApiError && err.status === 404) {
+            setStep((prev) =>
+              prev.kind === 'slicing' && prev.jobId === jobId
+                ? { kind: 'error', message: t('makerworld.printFlow.jobLost') }
+                : prev,
+            );
+          }
+        });
     poll();
     const id = window.setInterval(poll, 10000);
     return () => {

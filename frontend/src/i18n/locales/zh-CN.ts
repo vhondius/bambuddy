@@ -7517,6 +7517,7 @@ export default {
   makerworld: {
     notDownloadable: "旧版盘：MakerWorld 仅在其官网提供下载。",
     printFlow: {
+      jobLost: "服务器上已没有此任务（已重启或任务过旧）。请重试。",
       filamentSlot: "耗材 {{n}}",
       editSettings: "编辑设置",
       saveAndReslice: "保存并重新切片",

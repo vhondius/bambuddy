@@ -7584,6 +7584,7 @@ export default {
   makerworld: {
     notDownloadable: "Older plate: MakerWorld only offers it for download on its own website.",
     printFlow: {
+      jobLost: "The server no longer has this print job (it restarted, or the job is too old). Try again.",
       filamentSlot: "Filament {{n}}",
       editSettings: "Edit settings",
       saveAndReslice: "Save & re-slice",
