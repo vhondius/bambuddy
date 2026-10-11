@@ -35,6 +35,7 @@ vi.mock('../../api/client', () => ({
     createSlicerPipeline: vi.fn(),
     getSlicerPrinterModels: vi.fn(),
     getSlicerPresetValues: vi.fn(),
+    getPrinters: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -51,6 +52,7 @@ const mockApi = api as unknown as {
   createSlicerPipeline: ReturnType<typeof vi.fn>;
   getSlicerPrinterModels: ReturnType<typeof vi.fn>;
   getSlicerPresetValues: ReturnType<typeof vi.fn>;
+  getPrinters: ReturnType<typeof vi.fn>;
 };
 
 function makeUnified(overrides: Partial<UnifiedPresetsResponse> = {}): UnifiedPresetsResponse {
@@ -266,6 +268,22 @@ describe('SliceModal', () => {
       });
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it("starts from the printer's go-to profile when exactly one is set", async () => {
+    mockApi.getPrinters.mockResolvedValueOnce([
+      {
+        id: 1,
+        goto_printer_preset_source: 'standard',
+        goto_printer_preset_id: 'Bambu Lab X1 Carbon 0.4 nozzle',
+        goto_process_preset_source: 'standard',
+        goto_process_preset_id: '0.20mm Standard',
+        installed_bed_type: null,
+      },
+    ]);
+    renderWithTracker({ source: { kind: 'libraryFile', id: 100, filename: 'x.3mf' }, onClose: vi.fn() });
+    await waitFor(() => expect(presetSelects()[0]).toHaveValue('standard:Bambu Lab X1 Carbon 0.4 nozzle'));
+    await waitFor(() => expect(presetSelects()[1]).toHaveValue('standard:0.20mm Standard'));
   });
 
   it('offers "use the file\'s built-in settings" when the printer matches the design, and sends the flag (#2611)', async () => {

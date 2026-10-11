@@ -544,19 +544,50 @@ export function SliceModal({ source, onClose, defaultAutoArrange = false }: Slic
     setDesignKeys(useEmbedded ? new Set(designOverrides.map((o) => o.key)) : new Set());
   }, [designOverrides, useEmbedded]);
 
-  // Printer pre-pick: defaults to the printer the 3MF was prepared for when
-  // that preset is available, else the first listed printer. Runs once when
-  // presets first arrive; later re-renders preserve any manual choice.
+  // Printers' go-to print profiles (set in the printer dialog). The modal has
+  // no target printer, so one is only used when it's the only one set.
+  const printersQuery = useQuery({ queryKey: ['printers'], queryFn: api.getPrinters });
+  const gotoProfile = useMemo(() => {
+    const withGoto = (printersQuery.data ?? []).filter(
+      (p) => p.goto_printer_preset_source && p.goto_printer_preset_id,
+    );
+    const distinct = new Set(
+      withGoto.map((p) => `${p.goto_printer_preset_source}:${p.goto_printer_preset_id}:${p.goto_process_preset_id}`),
+    );
+    if (distinct.size !== 1) return null;
+    const p = withGoto[0];
+    return {
+      printer: { source: p.goto_printer_preset_source!, id: p.goto_printer_preset_id! },
+      process:
+        p.goto_process_preset_source && p.goto_process_preset_id
+          ? { source: p.goto_process_preset_source, id: p.goto_process_preset_id }
+          : null,
+      bedType: p.installed_bed_type ?? null,
+    };
+  }, [printersQuery.data]);
+
+  // Printer pre-pick: the go-to profile when exactly one is set, else the
+  // printer the 3MF was prepared for when that preset is available, else the
+  // first listed printer. Runs once when presets (and printers) first arrive;
+  // later re-renders preserve any manual choice.
   useEffect(() => {
     const data = presetsQuery.data;
-    if (!data) return;
+    if (!data || printersQuery.isLoading) return;
     if (printerPreset == null) {
+      if (gotoProfile && findPreset(data, gotoProfile.printer, 'printer')) {
+        setPrinterPreset(gotoProfile.printer);
+        if (gotoProfile.process && findPreset(data, gotoProfile.process, 'process')) {
+          setProcessPreset(gotoProfile.process);
+        }
+        if (gotoProfile.bedType) setBedType(gotoProfile.bedType);
+        return;
+      }
       setPrinterPreset(
         findPresetByName(data, 'printer', embeddedPrinter) ?? pickDefault(data, 'printer'),
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetsQuery.data, embeddedPrinter]);
+  }, [presetsQuery.data, embeddedPrinter, printersQuery.isLoading, gotoProfile]);
 
   // Process pre-pick / re-pick (#1325): defaults to a process compatible with
   // the selected printer, and re-defaults when a printer change leaves the
