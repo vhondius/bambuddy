@@ -4558,6 +4558,7 @@ export default {
     noMatches: 'Keine Einstellungen passen zu dieser Suche.',
   },
   slice: {
+    searchPresets: "Zum Suchen tippen…",
     filamentSlotUnset: 'nicht gewählt',
     processSettingsEmbedded: 'Wird nicht verwendet, solange „Integrierte Einstellungen der Datei verwenden“ aktiv ist – die Einstellungen der Datei bestimmen diesen Slice.',
     processSettingsInactive: 'Inaktiv',

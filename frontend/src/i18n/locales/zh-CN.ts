@@ -4545,6 +4545,7 @@ export default {
     noMatches: '没有与搜索匹配的设置。',
   },
   slice: {
+    searchPresets: "输入以搜索…",
     filamentSlotUnset: '未设置',
     processSettingsEmbedded: '启用“使用文件内置设置”时不生效——本次切片由文件自身的设置决定。',
     processSettingsInactive: '未启用',

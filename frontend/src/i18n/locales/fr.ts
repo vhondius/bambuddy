@@ -4546,6 +4546,7 @@ export default {
     noMatches: 'Aucun paramètre ne correspond à cette recherche.',
   },
   slice: {
+    searchPresets: "Tapez pour rechercher…",
     filamentSlotUnset: 'non défini',
     processSettingsEmbedded: 'Inutilisé tant que « Utiliser les paramètres intégrés du fichier » est activé : ce sont les paramètres du fichier qui pilotent ce découpage.',
     processSettingsInactive: 'Inactif',

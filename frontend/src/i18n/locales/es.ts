@@ -4560,6 +4560,7 @@ export default {
     noMatches: 'Ningún ajuste coincide con esta búsqueda.',
   },
   slice: {
+    searchPresets: "Escribe para buscar…",
     filamentSlotUnset: 'sin definir',
     processSettingsEmbedded: 'No se usa mientras «Usar los ajustes integrados del archivo» está activo: los ajustes del propio archivo rigen este corte.',
     processSettingsInactive: 'Inactivo',

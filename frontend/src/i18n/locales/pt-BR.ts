@@ -4545,6 +4545,7 @@ export default {
     noMatches: 'Nenhuma configuração corresponde a esta busca.',
   },
   slice: {
+    searchPresets: "Digite para pesquisar…",
     filamentSlotUnset: 'não definido',
     processSettingsEmbedded: 'Não é usado enquanto “Usar as configurações internas do arquivo” estiver ativo — as configurações do próprio arquivo conduzem este fatiamento.',
     processSettingsInactive: 'Inativo',

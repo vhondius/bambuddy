@@ -4590,6 +4590,7 @@ export default {
     noMatches: 'Немає параметрів, що відповідають запиту.',
   },
   slice: {
+    searchPresets: "Введіть для пошуку…",
     filamentSlotUnset: 'не задано',
     processSettingsEmbedded: 'Не використовується, доки увімкнено «Використовувати вбудовані параметри файлу» — нарізанням керують параметри самого файлу.',
     processSettingsInactive: 'Неактивно',

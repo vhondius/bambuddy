@@ -4592,6 +4592,7 @@ errors: {
     noMatches: 'Inga inställningar matchar denna sökning.',
   },
   slice: {
+    searchPresets: "Skriv för att söka…",
     filamentSlotUnset: 'inte inställt',
     processSettingsEmbedded: 'Används inte medan "Använd filens inbyggda inställningar" är på -- filens egna inställningar driver denna slicing.',
     processSettingsInactive: 'Inaktiv',

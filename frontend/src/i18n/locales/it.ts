@@ -4545,6 +4545,7 @@ export default {
     noMatches: 'Nessuna impostazione corrisponde a questa ricerca.',
   },
   slice: {
+    searchPresets: "Digita per cercare…",
     filamentSlotUnset: 'non impostato',
     processSettingsEmbedded: 'Non utilizzato finché «Usa le impostazioni integrate del file» è attivo: sono le impostazioni del file a guidare questo slice.',
     processSettingsInactive: 'Non attivo',

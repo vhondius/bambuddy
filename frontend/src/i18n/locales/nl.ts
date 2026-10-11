@@ -4593,6 +4593,7 @@ export default {
     noMatches: 'Geen instellingen komen overeen met deze zoekopdracht.',
   },
   slice: {
+    searchPresets: "Typ om te zoeken…",
     filamentSlotUnset: 'niet ingesteld',
     processSettingsEmbedded: 'Niet gebruikt zolang "Ingebouwde instellingen van het bestand gebruiken" is ingeschakeld -- de eigen instellingen van het bestand sturen deze slice aan.',
     processSettingsInactive: 'Inactief',

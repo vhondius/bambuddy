@@ -4593,6 +4593,7 @@ export default {
     noMatches: 'No settings match this search.',
   },
   slice: {
+    searchPresets: "Type to search…",
     filamentSlotUnset: 'not set',
     processSettingsEmbedded: 'Not used while "Use the file\'s built-in settings" is on -- the file\'s own settings drive this slice.',
     processSettingsInactive: 'Inactive',

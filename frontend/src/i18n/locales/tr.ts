@@ -4546,6 +4546,7 @@ export default {
     noMatches: 'Bu aramayla eşleşen ayar yok.',
   },
   slice: {
+    searchPresets: "Aramak için yazın…",
     filamentSlotUnset: 'ayarlanmadı',
     processSettingsEmbedded: '“Dosyanın yerleşik ayarlarını kullan” açıkken kullanılmaz — bu dilimlemeyi dosyanın kendi ayarları yönetir.',
     processSettingsInactive: 'Etkin değil',

@@ -4348,6 +4348,7 @@ export default {
     noMatches: '검색과 일치하는 설정이 없습니다.',
   },
   slice: {
+    searchPresets: "입력하여 검색…",
     filamentSlotUnset: '미설정',
     processSettingsEmbedded: "'파일에 포함된 설정 사용'이 켜져 있는 동안에는 사용되지 않습니다. 이 슬라이스는 파일 자체의 설정을 따릅니다.",
     processSettingsInactive: '비활성',

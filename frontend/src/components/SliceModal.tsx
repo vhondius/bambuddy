@@ -1517,6 +1517,22 @@ export function PresetDropdown({
   const totalEntries =
     sections.reduce((sum, s) => sum + s.entries.length, 0) + visibleOther.length;
 
+  // Type-to-filter for long lists. A search also looks through the presets
+  // held back for other printers, and never drops the current selection.
+  const [query, setQuery] = useState('');
+  const { shownSections, shownOther } = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return { shownSections: sections, shownOther: visibleOther };
+    const hit = (p: UnifiedPreset) =>
+      p.name.toLowerCase().includes(q) || `${p.source}:${p.id}` === selectedRefValue;
+    return {
+      shownSections: sections
+        .map((s) => ({ ...s, entries: s.entries.filter(hit) }))
+        .filter((s) => s.entries.length > 0),
+      shownOther: otherEntries.filter(hit),
+    };
+  }, [query, sections, visibleOther, otherEntries, selectedRefValue]);
+
   return (
     // A plain wrapper rather than a <label> around everything: the "Show all"
     // control is a button, and a button inside a label that also wraps the
@@ -1555,6 +1571,17 @@ export function PresetDropdown({
           </span>
         )}
       </div>
+      {totalEntries > 10 && (
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          disabled={disabled}
+          placeholder={t('slice.searchPresets', 'Type to search…')}
+          aria-label={`${label}: ${t('slice.searchPresets', 'Type to search…')}`}
+          className="w-full mb-1 px-3 py-1.5 rounded-md bg-bambu-dark border border-bambu-dark-tertiary text-white text-xs focus:outline-none focus:border-bambu-gray disabled:opacity-50"
+        />
+      )}
       <div className="flex items-stretch gap-2">
       <select
         id={selectId}
@@ -1568,7 +1595,7 @@ export function PresetDropdown({
             ? t('slice.noPresetsForSlot')
             : t('slice.selectPreset')}
         </option>
-        {sections.map((section) => (
+        {shownSections.map((section) => (
           <optgroup key={section.tierLabel} label={section.tierLabel}>
             {section.entries.map((p) => (
               <option key={`${p.source}:${p.id}`} value={`${p.source}:${p.id}`}>
@@ -1577,9 +1604,9 @@ export function PresetDropdown({
             ))}
           </optgroup>
         ))}
-        {visibleOther.length > 0 && (
+        {shownOther.length > 0 && (
           <optgroup label={t('slice.otherPrinters')}>
-            {visibleOther.map((p) => (
+            {shownOther.map((p) => (
               <option key={`${p.source}:${p.id}`} value={`${p.source}:${p.id}`}>
                 {p.name}
               </option>

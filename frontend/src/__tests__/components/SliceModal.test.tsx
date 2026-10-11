@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../utils';
-import { SliceModal } from '../../components/SliceModal';
+import { PresetDropdown, SliceModal } from '../../components/SliceModal';
 import { pickFilamentForSlot } from '../../utils/slicePresetPicker';
 import { buildCompatibilityIndex } from '../../utils/slicerPrinterMatch';
 import { SliceJobTrackerProvider } from '../../contexts/SliceJobTrackerContext';
@@ -268,6 +268,37 @@ describe('SliceModal', () => {
       });
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('filters a long preset list by typing, including presets for other printers', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      id: `PLA ${i} @BBL X1 Carbon`, name: `PLA ${i} @BBL X1 Carbon`, source: 'standard' as const,
+    }));
+    mockApi.getSlicerPresets.mockResolvedValue(makeUnified({
+      standard: {
+        printer: [{ id: 'Bambu Lab X1 Carbon 0.4 nozzle', name: 'Bambu Lab X1 Carbon 0.4 nozzle', source: 'standard' }],
+        process: [{ id: '0.20mm Standard @BBL X1C', name: '0.20mm Standard @BBL X1C', source: 'standard' }],
+        filament: [...many, { id: 'Bambu TPU @BBL A1', name: 'Bambu TPU @BBL A1', source: 'standard' }],
+      },
+    }));
+    const data = await mockApi.getSlicerPresets();
+    render(
+      <PresetDropdown
+        label="Filament 1"
+        slot="filament"
+        data={data}
+        value={null}
+        onChange={vi.fn()}
+        selectedPrinterName="Bambu Lab X1 Carbon 0.4 nozzle"
+      />,
+    );
+    const search = screen.getByRole('searchbox');
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(select.querySelectorAll('option').length).toBe(13);
+    await userEvent.setup().type(search, 'tpu');
+    const names = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
+    expect(names).toContain('Bambu TPU @BBL A1');
+    expect(names.filter((n) => n?.startsWith('PLA ')).length).toBeLessThanOrEqual(1);
   });
 
   it("starts from the printer's go-to profile when exactly one is set", async () => {

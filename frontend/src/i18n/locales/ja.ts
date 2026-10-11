@@ -4558,6 +4558,7 @@ export default {
     noMatches: 'この検索に一致する設定はありません。',
   },
   slice: {
+    searchPresets: "入力して検索…",
     filamentSlotUnset: '未設定',
     processSettingsEmbedded: '「ファイル内蔵の設定を使用」が有効な間は使用されません。このスライスはファイル自身の設定で実行されます。',
     processSettingsInactive: '無効',
