@@ -530,6 +530,19 @@ describe('presetCompatibility — nozzle-only @<size> tag (#2628 follow-up)', ()
   });
 });
 
+describe('presetCompatibility — printer preset with a tail after the nozzle', () => {
+  const index = buildCompatibilityIndex(PRINTER_MODELS);
+  const EDITED_X2D = 'Bambu Lab X2D 0.4 nozzle - Edited';
+
+  it('matches presets for the same printer and still rules out others', () => {
+    expect(presetCompatibility({ name: 'Bambu PLA Basic @BBL X2D' }, 'filament', EDITED_X2D, index)).toBe('match');
+    expect(presetCompatibility({ name: 'Bambu PLA Basic @BBL X1C' }, 'filament', EDITED_X2D, index)).toBe('mismatch');
+    expect(
+      presetCompatibility({ name: '0.20mm Standard @BBL X2D 0.6 nozzle' }, 'process', EDITED_X2D, index),
+    ).toBe('mismatch');
+  });
+});
+
 describe("presetCompatibility — BambuStudio's \"# \" user-clone prefix", () => {
   const index = buildCompatibilityIndex(PRINTER_MODELS);
   // Editing a system preset saves a copy under this name; .bbscfg bundle

@@ -164,7 +164,12 @@ function extractBblToken(presetName: string): { token: string; nozzle: string | 
 // nozzle]" printer preset name. Returns null for non-Bambu printer
 // presets — there is no reliable name-based match against those.
 function extractPrinterPresetModel(printerPresetName: string): { model: string; nozzle: string | null } | null {
-  const m = stripUserClonePrefix(printerPresetName).match(/^Bambu Lab\s+(.+)$/i);
+  // A user copy can carry a tail after the nozzle segment ("Bambu Lab X2D 0.4
+  // nozzle - Edited"). Left on, the nozzle suffix doesn't parse, the model
+  // reads as "X2D 0.4 nozzle - Edited", and every X2D preset becomes a
+  // mismatch and is hidden.
+  const name = stripUserClonePrefix(printerPresetName).replace(/(\d\s*nozzle)\b.*$/i, '$1');
+  const m = name.match(/^Bambu Lab\s+(.+)$/i);
   if (!m) return null;
   const { stripped, nozzle } = takeNozzleSuffix(m[1]);
   return stripped ? { model: stripped, nozzle } : null;
