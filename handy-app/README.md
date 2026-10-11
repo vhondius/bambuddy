@@ -1,7 +1,7 @@
 # Bambuddy Handy (Android)
 
 A small sideloaded app for printing MakerWorld models through your own
-Bambuddy, running this fork (see the [main README](../README.md#bambuddy-handy-this-fork)).
+Bambuddy, running this fork (see the [main README](../README.md)).
 It wears MakerWorld's look throughout: its colours (light and dark), its
 typeface Inter, and a slim icon-only bar whose status-bar and gesture-bar
 strips share the bar's colour.
