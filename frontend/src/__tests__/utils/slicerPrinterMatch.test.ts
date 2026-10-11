@@ -541,6 +541,16 @@ describe('presetCompatibility — printer preset with a tail after the nozzle', 
       presetCompatibility({ name: '0.20mm Standard @BBL X2D 0.6 nozzle' }, 'process', EDITED_X2D, index),
     ).toBe('mismatch');
   });
+
+  it('matches compatible_printers against the edited copy', () => {
+    const X2D_04 = 'Bambu Lab X2D 0.4 nozzle';
+    expect(
+      presetCompatibility({ name: 'Bambu PLA Basic @BBL X2D 0.4 nozzle', compatible_printers: [X2D_04] }, 'filament', EDITED_X2D, index),
+    ).toBe('match');
+    expect(
+      presetCompatibility({ name: 'Bambu PLA Basic @BBL X2D', compatible_printers: ['Bambu Lab X2D 0.6 nozzle'] }, 'filament', EDITED_X2D, index),
+    ).toBe('mismatch');
+  });
 });
 
 describe("presetCompatibility — BambuStudio's \"# \" user-clone prefix", () => {

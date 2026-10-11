@@ -132,6 +132,13 @@ function stripUserClonePrefix(name: string): string {
   return name.replace(/^#\s*/, '').trim();
 }
 
+// A user copy of a system printer can also carry a tail after the nozzle
+// segment ("Bambu Lab X2D 0.4 nozzle - Edited"). Cut along with the clone
+// prefix, or every preset for that printer reads as a mismatch and is hidden.
+function canonicalPrinterName(name: string): string {
+  return stripUserClonePrefix(name).replace(/(\d\s*nozzle)\b.*$/i, '$1');
+}
+
 // Bambu Studio's naming convention for bundled presets: the 0.4 nozzle is
 // the default and its variants drop the nozzle suffix; 0.2 / 0.6 / 0.8
 // carry an explicit "<size> nozzle" segment. So a process with no suffix
@@ -164,12 +171,7 @@ function extractBblToken(presetName: string): { token: string; nozzle: string | 
 // nozzle]" printer preset name. Returns null for non-Bambu printer
 // presets — there is no reliable name-based match against those.
 function extractPrinterPresetModel(printerPresetName: string): { model: string; nozzle: string | null } | null {
-  // A user copy can carry a tail after the nozzle segment ("Bambu Lab X2D 0.4
-  // nozzle - Edited"). Left on, the nozzle suffix doesn't parse, the model
-  // reads as "X2D 0.4 nozzle - Edited", and every X2D preset becomes a
-  // mismatch and is hidden.
-  const name = stripUserClonePrefix(printerPresetName).replace(/(\d\s*nozzle)\b.*$/i, '$1');
-  const m = name.match(/^Bambu Lab\s+(.+)$/i);
+  const m = canonicalPrinterName(printerPresetName).match(/^Bambu Lab\s+(.+)$/i);
   if (!m) return null;
   const { stripped, nozzle } = takeNozzleSuffix(m[1]);
   return stripped ? { model: stripped, nozzle } : null;
@@ -323,8 +325,8 @@ export function presetCompatibility(
     // system printer lists the *unprefixed* name, and comparing that raw
     // against a selected "# Bambu Lab …" reads as a mismatch — which now
     // hides the preset rather than merely demoting it.
-    const selected = stripUserClonePrefix(selectedPrinterName);
-    return compat.some((name) => stripUserClonePrefix(name) === selected) ? 'match' : 'mismatch';
+    const selected = canonicalPrinterName(selectedPrinterName);
+    return compat.some((name) => canonicalPrinterName(name) === selected) ? 'match' : 'mismatch';
   }
   // (2) BambuStudio's `@BBL <model>` name convention — covers cloud /
   // standard presets that don't carry compatible_printers.
