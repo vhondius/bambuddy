@@ -99,6 +99,30 @@ describe('Layout', () => {
     });
   });
 
+  describe("Bambuddy Handy app's Printer tab", () => {
+    const realUserAgent = navigator.userAgent;
+    afterEach(() => {
+      Object.defineProperty(navigator, 'userAgent', { value: realUserAgent, configurable: true });
+    });
+
+    it('leaves out the menu when the app marks the WebView', async () => {
+      Object.defineProperty(navigator, 'userAgent', {
+        value: `${realUserAgent} BambuddyHandyEmbedded`,
+        configurable: true,
+      });
+      render(<Layout />);
+      // The page itself still renders; the navigation doesn't.
+      await waitFor(() => expect(document.querySelector('main')).toBeInTheDocument());
+      expect(document.querySelector('aside')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /settings/i })).not.toBeInTheDocument();
+    });
+
+    it('keeps the menu everywhere else', async () => {
+      render(<Layout />);
+      await waitFor(() => expect(document.querySelector('aside')).toBeInTheDocument());
+    });
+  });
+
   describe('navigation', () => {
     it('has navigation items', async () => {
       render(<Layout />);

@@ -79,6 +79,10 @@ export function Layout() {
   const { mode, resolvedMode, toggleMode } = useTheme();
   const { t } = useTranslation();
   const isSidebarCompact = useIsSidebarCompact();
+  // The Bambuddy Handy app's Printer tab shows the printers page on its own:
+  // no menu, so a tap can't take that tab somewhere else. The app marks that
+  // WebView in its user agent, which survives reloads and in-app navigation.
+  const embedded = typeof navigator !== 'undefined' && navigator.userAgent.includes('BambuddyHandyEmbedded');
 
   // Bug-report panel state lives here because the trigger moves (#2750,
   // reporter @goodjaltman). Below the sidebar-compact breakpoint the floating
@@ -577,7 +581,7 @@ export function Layout() {
   return (
     <div className="flex min-h-screen">
       {/* Compact Header */}
-      {isSidebarCompact && (
+      {isSidebarCompact && !embedded && (
         <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-bambu-dark-secondary border-b border-bambu-dark-tertiary flex items-center px-4">
           <button
             onClick={() => setMobileDrawerOpen(true)}
@@ -614,6 +618,7 @@ export function Layout() {
       )}
 
       {/* Sidebar / Mobile Drawer */}
+      {!embedded && (
       <aside
         className={`bg-bambu-dark-secondary border-r border-bambu-dark-tertiary flex flex-col transition-all duration-300 ${
           isSidebarCompact
@@ -982,10 +987,11 @@ export function Layout() {
           )}
         </div>
       </aside>
+      )}
 
       {/* Main content */}
       <main className={`flex-1 bg-bambu-dark overflow-auto transition-all duration-300 ${
-        isSidebarCompact ? 'mt-14' : sidebarExpanded ? 'ml-64' : 'ml-16'
+        embedded ? '' : isSidebarCompact ? 'mt-14' : sidebarExpanded ? 'ml-64' : 'ml-16'
       }`}>
         {/* Debug logging indicator */}
         {debugLoggingState?.enabled && (
