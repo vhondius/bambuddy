@@ -410,6 +410,8 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
             notice: printNotice,
             process_preset: { source: 'standard', id: '0.20mm Standard @BBL X2D' },
             design_overrides: ['wall_loops'],
+            printer_preset: { source: 'standard', id: 'Bambu Lab X2D 0.4 nozzle' },
+            filament_presets: [{ source: 'standard', id: 'Bambu PLA Basic @BBL X2D' }],
             plates: [{ plate: 1, ams_mapping: [0], block: printBlock }],
           },
         }),
@@ -435,6 +437,23 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
         }),
       ),
       http.get('*/printers/3/status', () => HttpResponse.json({ connected: true, ams: [], vt_tray: [] })),
+      http.get('*/slicer/printer-models', () => HttpResponse.json({ 'Bambu Lab X2D': 'X2D' })),
+      http.get('*/slicer/presets', () => {
+        const std = (name: string) => ({ id: name, name, source: 'standard' });
+        const empty = { printer: [], process: [], filament: [] };
+        return HttpResponse.json({
+          local: empty,
+          cloud: empty,
+          orca_cloud: empty,
+          standard: {
+            printer: [std('Bambu Lab X2D 0.4 nozzle')],
+            process: [std('0.20mm Standard @BBL X2D')],
+            filament: [std('Bambu PLA Basic @BBL X2D'), std('Bambu PETG HF @BBL X2D')],
+          },
+          cloud_status: 'ok',
+          orca_cloud_status: 'ok',
+        });
+      }),
       http.get('*/slicer/preset-values', () =>
         HttpResponse.json({ resolved: true, reason: 'ok', values: { layer_height: '0.2', wall_loops: '2' } }),
       ),
@@ -474,6 +493,7 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
     const layer = await screen.findByLabelText(/^Layer height/);
     await user.clear(layer);
     await user.type(layer, '0.28');
+    await user.selectOptions(await screen.findByLabelText('Filament 1'), 'standard:Bambu PETG HF @BBL X2D');
     await user.click(screen.getByRole('button', { name: 'Save & re-slice' }));
 
     await screen.findByRole('button', { name: 'Print' });
@@ -483,6 +503,7 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
       printer_id: 3,
       process_overrides: { layer_height: '0.28' },
       design_overrides: ['wall_loops'],
+      filament_presets: [{ source: 'standard', id: 'Bambu PETG HF @BBL X2D' }],
     });
   });
 

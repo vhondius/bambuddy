@@ -7533,6 +7533,7 @@ export default {
   makerworld: {
     notDownloadable: "Ältere Platte: MakerWorld bietet sie nur auf der eigenen Website zum Download an.",
     printFlow: {
+      filamentSlot: "Filament {{n}}",
       editSettings: "Einstellungen bearbeiten",
       saveAndReslice: "Speichern & neu slicen",
       gotoMissing: "Dieser Drucker hat noch kein Standard-Druckprofil. Lege zuerst eines in den Druckereinstellungen fest.",

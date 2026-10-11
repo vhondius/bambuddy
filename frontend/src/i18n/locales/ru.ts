@@ -7155,6 +7155,7 @@ export default {
   makerworld: {
     notDownloadable: "Старый стол: MakerWorld позволяет скачать его только на своём сайте.",
     printFlow: {
+      filamentSlot: "Филамент {{n}}",
       editSettings: "Изменить настройки",
       saveAndReslice: "Сохранить и перенарезать",
       gotoMissing: "У этого принтера ещё нет основного профиля печати. Сначала задайте его в настройках принтера.",

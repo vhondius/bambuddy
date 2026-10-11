@@ -7519,6 +7519,7 @@ export default {
   makerworld: {
     notDownloadable: "Piatto datato: MakerWorld lo rende scaricabile solo dal proprio sito web.",
     printFlow: {
+      filamentSlot: "Filamento {{n}}",
       editSettings: "Modifica impostazioni",
       saveAndReslice: "Salva e riesegui lo slicing",
       gotoMissing: "Questa stampante non ha ancora un profilo di stampa predefinito. Impostane uno nelle impostazioni della stampante.",

@@ -346,6 +346,7 @@ class TestPrintRoute:
             printer_id=printer.id,
             process_overrides={"wall_loops": "4", "enable_support": "1"},
             design_overrides=["sparse_infill_density"],
+            filament_presets=[{"source": "standard", "id": "Bambu PETG HF @BBL A1"}],
         )
         assert resp.status_code == 202, resp.text
         job = await self._finish(async_client, resp.json()["job_id"])
@@ -356,6 +357,9 @@ class TestPrintRoute:
         result = job["result"]
         assert result["process_preset"] == {"source": "cloud", "id": "PFUSmyprocess"}
         assert result["design_overrides"] == ["sparse_infill_density"]
+        assert [f.id for f in req.filament_presets] == ["Bambu PETG HF @BBL A1"]
+        assert result["filament_presets"] == [{"source": "standard", "id": "Bambu PETG HF @BBL A1"}]
+        assert result["printer_preset"] == {"source": "standard", "id": "Bambu Lab A1 0.4 nozzle"}
 
     @pytest.mark.asyncio
     async def test_no_matching_profile_arranges_with_goto_presets_and_says_so(

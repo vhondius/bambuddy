@@ -7517,6 +7517,7 @@ export default {
   makerworld: {
     notDownloadable: "旧版盘：MakerWorld 仅在其官网提供下载。",
     printFlow: {
+      filamentSlot: "耗材 {{n}}",
       editSettings: "编辑设置",
       saveAndReslice: "保存并重新切片",
       gotoMissing: "此打印机还没有默认打印配置。请先在打印机设置中设置。",

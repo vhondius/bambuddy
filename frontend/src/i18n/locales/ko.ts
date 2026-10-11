@@ -6974,6 +6974,7 @@ export default {
   makerworld: {
     notDownloadable: "이전 플레이트: MakerWorld 웹사이트에서만 다운로드할 수 있습니다.",
     printFlow: {
+      filamentSlot: "필라멘트 {{n}}",
       editSettings: "설정 편집",
       saveAndReslice: "저장 후 다시 슬라이스",
       gotoMissing: "이 프린터에는 아직 기본 출력 프로필이 없습니다. 먼저 프린터 설정에서 지정하세요.",

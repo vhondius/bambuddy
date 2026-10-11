@@ -2149,6 +2149,9 @@ export interface MakerworldPrintResult extends SliceResponse {
    *  "Edit settings" starts from. */
   process_preset?: PresetRef;
   design_overrides?: string[];
+  /** The go-to printer preset and the filament preset per slot it sliced with. */
+  printer_preset?: PresetRef;
+  filament_presets?: PresetRef[];
   plates: MakerworldPrintPlate[];
 }
 
@@ -6151,7 +6154,11 @@ export const api = {
   startMakerworldPrint: (
     url: string,
     printerId?: number | null,
-    edits?: { process_overrides: Record<string, string | string[]>; design_overrides: string[] } | null,
+    edits?: {
+      process_overrides: Record<string, string | string[]>;
+      design_overrides: string[];
+      filament_presets?: PresetRef[];
+    } | null,
   ) =>
     request<MakerworldPrintStart>('/makerworld/print', {
       method: 'POST',

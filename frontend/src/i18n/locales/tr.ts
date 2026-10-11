@@ -7470,6 +7470,7 @@ export default {
   makerworld: {
     notDownloadable: "Eski plaka: MakerWorld bunu yalnızca kendi web sitesinde indirmeye sunuyor.",
     printFlow: {
+      filamentSlot: "Filament {{n}}",
       editSettings: "Ayarları düzenle",
       saveAndReslice: "Kaydet ve yeniden dilimle",
       gotoMissing: "Bu yazıcının henüz varsayılan baskı profili yok. Önce yazıcı ayarlarından birini seçin.",

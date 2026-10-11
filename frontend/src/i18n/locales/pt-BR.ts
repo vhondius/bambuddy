@@ -7519,6 +7519,7 @@ export default {
   makerworld: {
     notDownloadable: "Placa antiga: o MakerWorld só a disponibiliza para download no próprio site.",
     printFlow: {
+      filamentSlot: "Filamento {{n}}",
       editSettings: "Editar configurações",
       saveAndReslice: "Salvar e fatiar novamente",
       gotoMissing: "Esta impressora ainda não tem um perfil de impressão padrão. Defina um nas configurações da impressora primeiro.",

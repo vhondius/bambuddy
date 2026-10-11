@@ -7520,6 +7520,7 @@ export default {
   makerworld: {
     notDownloadable: "Ancien plateau : MakerWorld ne le propose au téléchargement que sur son propre site.",
     printFlow: {
+      filamentSlot: "Filament {{n}}",
       editSettings: "Modifier les réglages",
       saveAndReslice: "Enregistrer et relancer le découpage",
       gotoMissing: "Cette imprimante n'a pas encore de profil d'impression par défaut. Définissez-en un dans ses réglages.",

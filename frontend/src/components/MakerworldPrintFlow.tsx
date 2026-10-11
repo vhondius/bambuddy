@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -7,16 +7,19 @@ import {
   api,
   ApiError,
   type MakerworldPrintResult,
+  type PresetRef,
   type SliceJobState,
 } from '../api/client';
 import { buildLoadedFilaments } from '../hooks/useFilamentMapping';
 import type { SettingValue } from '../types/slicerSettings';
 import SlicerSettingsPanel from './SlicerSettingsPanel';
+import { findPreset } from '../utils/slicePresetPicker';
+import { buildCompatibilityIndex } from '../utils/slicerPrinterMatch';
 import { useToast } from '../contexts/ToastContext';
 import { formatDuration } from '../utils/date';
 import { Button } from './Button';
 import { PrintModal } from './PrintModal';
-import { SliceModal, type SliceSource } from './SliceModal';
+import { PresetDropdown, SliceModal, type SliceSource } from './SliceModal';
 
 interface PrinterChoice {
   id: number;
@@ -57,6 +60,7 @@ interface Edits {
   values: Record<string, SettingValue>;
   serialized: Record<string, string | string[]>;
   designKeys: string[];
+  filaments: PresetRef[];
 }
 
 /**
@@ -90,7 +94,11 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
         const started = await api.startMakerworldPrint(
           url,
           chosenPrinterId,
-          withEdits && { process_overrides: withEdits.serialized, design_overrides: withEdits.designKeys },
+          withEdits && {
+            process_overrides: withEdits.serialized,
+            design_overrides: withEdits.designKeys,
+            filament_presets: withEdits.filaments,
+          },
         );
         setStep({ kind: 'slicing', jobId: started.job_id, job: null });
         onJobStarted?.(started.job_id);
@@ -442,7 +450,21 @@ function EditSettings({
   const [designKeys, setDesignKeys] = useState<Set<string>>(
     () => new Set(edits?.designKeys ?? result.design_overrides ?? []),
   );
+  const [filaments, setFilaments] = useState<(PresetRef | null)[]>(
+    edits?.filaments ?? result.filament_presets ?? [],
+  );
   const process = result.process_preset!;
+  const presetsQuery = useQuery({ queryKey: ['slicerPresets'], queryFn: () => api.getSlicerPresets() });
+  const printerModelsQuery = useQuery({
+    queryKey: ['slicerPrinterModels'],
+    queryFn: api.getSlicerPrinterModels,
+    staleTime: Infinity,
+  });
+  const compatIndex = useMemo(() => buildCompatibilityIndex(printerModelsQuery.data ?? {}), [printerModelsQuery.data]);
+  const printerName =
+    presetsQuery.data && result.printer_preset
+      ? (findPreset(presetsQuery.data, result.printer_preset, 'printer')?.name ?? null)
+      : null;
   const presetValuesQuery = useQuery({
     queryKey: ['slicer-preset-values', process.source, process.id],
     queryFn: () => api.getSlicerPresetValues(process),
@@ -456,6 +478,22 @@ function EditSettings({
 
   return (
     <div className="space-y-4">
+      {presetsQuery.data && filaments.length > 0 && (
+        <div className="space-y-3">
+          {filaments.map((ref, i) => (
+            <PresetDropdown
+              key={i}
+              label={t('makerworld.printFlow.filamentSlot', { n: i + 1 })}
+              slot="filament"
+              data={presetsQuery.data}
+              value={ref}
+              onChange={(next) => setFilaments((prev) => prev.map((f, j) => (j === i ? next : f)))}
+              selectedPrinterName={printerName}
+              compatIndex={compatIndex}
+            />
+          ))}
+        </div>
+      )}
       <SlicerSettingsPanel
         values={values}
         onChange={(v, s) => {
@@ -482,7 +520,10 @@ function EditSettings({
         </Button>
         <Button
           className="flex-1 min-w-[8rem]"
-          onClick={() => onSave({ values, serialized, designKeys: [...designKeys] })}
+          disabled={filaments.some((f) => f == null)}
+          onClick={() =>
+            onSave({ values, serialized, designKeys: [...designKeys], filaments: filaments as PresetRef[] })
+          }
         >
           {t('makerworld.printFlow.saveAndReslice')}
         </Button>

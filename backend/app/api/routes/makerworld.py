@@ -597,7 +597,7 @@ async def start_print_flow(
         matched = False  # made for this model, but for another nozzle
     model_bytes = (Path(app_settings.base_dir) / source.file_path).read_bytes()
     try:
-        filaments = pick_filament_presets(
+        filaments = body.filament_presets or pick_filament_presets(
             model_bytes,
             (await _fetch_bundled_presets(db))["filament"],
             system_printer_name(printer_ref, printer.model, printer_nozzle),
@@ -673,6 +673,8 @@ async def start_print_flow(
             # What the preview's settings editor starts from.
             "process_preset": process_ref.model_dump(),
             "design_overrides": request.design_overrides or [],
+            "printer_preset": printer_ref.model_dump(),
+            "filament_presets": [f.model_dump() for f in request.filament_presets],
             "plates": [
                 {
                     "plate": p["plate"],

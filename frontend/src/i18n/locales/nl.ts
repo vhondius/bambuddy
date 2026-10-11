@@ -7584,6 +7584,7 @@ export default {
   makerworld: {
     notDownloadable: "Oudere plaat: MakerWorld biedt deze alleen op de eigen website als download aan.",
     printFlow: {
+      filamentSlot: "Filament {{n}}",
       editSettings: "Instellingen bewerken",
       saveAndReslice: "Opslaan & opnieuw slicen",
       gotoMissing: "Deze printer heeft nog geen standaard printprofiel. Stel er eerst een in bij de printerinstellingen.",

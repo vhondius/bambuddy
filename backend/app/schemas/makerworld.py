@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.slicer import PresetRef
+
 
 class MakerWorldResolveRequest(BaseModel):
     """Body for POST /makerworld/resolve."""
@@ -144,4 +146,8 @@ class MakerWorldPrintRequest(BaseModel):
         default=None,
         description="Creator's changed settings to carry, by key. Omitted: all of them when the profile was "
         "made for this printer, none otherwise.",
+    )
+    filament_presets: list[PresetRef] | None = Field(
+        default=None,
+        description="Filament preset per project slot. Omitted: picked from the file's filaments for this printer.",
     )
