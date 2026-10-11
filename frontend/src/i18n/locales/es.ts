@@ -7541,6 +7541,7 @@ export default {
   makerworld: {
     notDownloadable: "Placa antigua: MakerWorld solo la ofrece para descargar en su propio sitio web.",
     printFlow: {
+      backToPreview: "Volver a la vista previa",
       jobLost: "El servidor ya no tiene este trabajo (se reinició o es demasiado antiguo). Inténtalo de nuevo.",
       filamentSlot: "Filamento {{n}}",
       editSettings: "Editar ajustes",

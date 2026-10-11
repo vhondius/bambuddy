@@ -7519,6 +7519,7 @@ export default {
   makerworld: {
     notDownloadable: "Piatto datato: MakerWorld lo rende scaricabile solo dal proprio sito web.",
     printFlow: {
+      backToPreview: "Torna all'anteprima",
       jobLost: "Il server non ha più questo lavoro (è stato riavviato o è troppo vecchio). Riprova.",
       filamentSlot: "Filamento {{n}}",
       editSettings: "Modifica impostazioni",

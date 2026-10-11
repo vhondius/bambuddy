@@ -8,7 +8,12 @@
  * DOMPurify sanitising of user-authored summary HTML.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+
+// The toolpath viewer needs WebGL; the flow tests only care where it opens.
+vi.mock('../../components/GcodeToolpathViewer', () => ({
+  GcodeToolpathViewer: ({ gcodeUrl }: { gcodeUrl: string }) => <div data-testid="gcode-viewer">{gcodeUrl}</div>,
+}));
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -519,6 +524,35 @@ describe('MakerworldPage /makerworld?url= deep link (print flow)', () => {
 
     expect(await screen.findByText(/no longer has this print job/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
+  it('opens the G-code preview inside the flow and comes back to the preview', async () => {
+    usePrintFlowHandlers([]);
+    window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+    render(<MakerworldPage />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'G-code preview' }));
+    expect(screen.getByTestId('gcode-viewer')).toHaveTextContent('/library/files/8/gcode?plate=1');
+    expect(window.location.pathname).toBe('/makerworld');
+    await user.click(screen.getByRole('button', { name: 'Back to preview' }));
+    expect(screen.queryByTestId('gcode-viewer')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument();
+  });
+
+  it('in the Android app, closing goes back to the MakerWorld tab', async () => {
+    const closeFlow = vi.fn();
+    window.BambuddyHandyApp = { closeFlow };
+    try {
+      usePrintFlowHandlers([]);
+      window.history.replaceState(null, '', `/makerworld?url=${encodeURIComponent(MODEL)}`);
+      render(<MakerworldPage />);
+      await screen.findByRole('button', { name: 'Print' });
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+      expect(closeFlow).toHaveBeenCalledOnce();
+    } finally {
+      delete window.BambuddyHandyApp;
+    }
   });
 
   it('puts back a #profileId that an unencoded link left in the page hash', async () => {

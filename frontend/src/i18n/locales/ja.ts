@@ -7533,6 +7533,7 @@ export default {
   makerworld: {
     notDownloadable: "古いプレート：MakerWorld の公式サイトでのみダウンロードできます。",
     printFlow: {
+      backToPreview: "プレビューに戻る",
       jobLost: "サーバーにこの印刷ジョブがありません（再起動したか、古すぎます）。もう一度お試しください。",
       filamentSlot: "フィラメント {{n}}",
       editSettings: "設定を編集",

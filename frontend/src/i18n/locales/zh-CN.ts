@@ -7517,6 +7517,7 @@ export default {
   makerworld: {
     notDownloadable: "旧版盘：MakerWorld 仅在其官网提供下载。",
     printFlow: {
+      backToPreview: "返回预览",
       jobLost: "服务器上已没有此任务（已重启或任务过旧）。请重试。",
       filamentSlot: "耗材 {{n}}",
       editSettings: "编辑设置",

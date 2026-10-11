@@ -7584,6 +7584,7 @@ export default {
   makerworld: {
     notDownloadable: "Oudere plaat: MakerWorld biedt deze alleen op de eigen website als download aan.",
     printFlow: {
+      backToPreview: "Terug naar voorbeeld",
       jobLost: "De server kent deze printtaak niet meer (herstart, of de taak is te oud). Probeer het opnieuw.",
       filamentSlot: "Filament {{n}}",
       editSettings: "Instellingen bewerken",

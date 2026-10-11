@@ -6974,6 +6974,7 @@ export default {
   makerworld: {
     notDownloadable: "이전 플레이트: MakerWorld 웹사이트에서만 다운로드할 수 있습니다.",
     printFlow: {
+      backToPreview: "미리보기로 돌아가기",
       jobLost: "서버에 이 작업이 더 이상 없습니다(재시작되었거나 너무 오래됨). 다시 시도하세요.",
       filamentSlot: "필라멘트 {{n}}",
       editSettings: "설정 편집",

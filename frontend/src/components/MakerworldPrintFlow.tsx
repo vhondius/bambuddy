@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Printer as PrinterIcon, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Printer as PrinterIcon, X } from 'lucide-react';
 import {
   api,
   ApiError,
@@ -18,8 +18,16 @@ import { buildCompatibilityIndex } from '../utils/slicerPrinterMatch';
 import { useToast } from '../contexts/ToastContext';
 import { formatDuration } from '../utils/date';
 import { Button } from './Button';
+import { GcodeToolpathViewer } from './GcodeToolpathViewer';
 import { PrintModal } from './PrintModal';
 import { PresetDropdown, SliceModal, type SliceSource } from './SliceModal';
+
+declare global {
+  interface Window {
+    /** Set by the Bambuddy Handy Android app. */
+    BambuddyHandyApp?: { closeFlow: () => void };
+  }
+}
 
 interface PrinterChoice {
   id: number;
@@ -76,6 +84,13 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
     resumeJobId ? { kind: 'slicing', jobId: resumeJobId, job: null } : { kind: 'starting' },
   );
   const [openDialog, setOpenDialog] = useState<Handover | null>(null);
+  // In the Bambuddy Handy app the flow is a sheet over the MakerWorld tab it
+  // was started from: closing it goes back there rather than leaving the user
+  // in the rest of Bambuddy.
+  const closeFlow = () => {
+    onClose();
+    window.BambuddyHandyApp?.closeFlow();
+  };
   // Kept across re-slices so a second edit starts from the first one.
   const [edits, setEdits] = useState<Edits | null>(null);
   const handOver = (h: Handover) => {
@@ -195,7 +210,7 @@ export function MakerworldPrintFlow({ url, printerId, jobId: resumeJobId, onJobS
             <PrinterIcon className="w-5 h-5 text-bambu-green" />
             {t('makerworld.printFlow.title')}
           </h2>
-          <button type="button" onClick={onClose} className="p-2 text-bambu-gray hover:text-white" aria-label={t('common.close')}>
+          <button type="button" onClick={closeFlow} className="p-2 text-bambu-gray hover:text-white" aria-label={t('common.close')}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -306,10 +321,12 @@ function Preview({
   onEditSettings: () => void;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [plateIdx, setPlateIdx] = useState(0);
   const [queueing, setQueueing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The G-code preview opens over the flow rather than on Bambuddy's viewer
+  // page, so leaving it comes back here instead of into the rest of the app.
+  const [showGcode, setShowGcode] = useState(false);
 
   const { data: platesData } = useQuery({
     queryKey: ['library-file-plates', result.library_file_id],
@@ -343,9 +360,31 @@ function Preview({
   };
 
   const block = flowPlate?.block ?? null;
+  // slot_id is 1-based, the G-code's tools 0-based.
+  const gcodeColors: string[] = [];
+  for (const f of meta?.filaments ?? []) if (f.color) gcodeColors[Math.max(0, f.slot_id - 1)] = f.color;
 
   return (
     <div className="space-y-4">
+      {showGcode && (
+        <div className="fixed inset-0 z-[60] bg-bambu-dark-secondary flex flex-col">
+          <div className="flex-shrink-0 p-2 border-b border-bambu-dark-tertiary">
+            <button
+              type="button"
+              onClick={() => setShowGcode(false)}
+              className="inline-flex items-center gap-1.5 p-2 text-sm text-gray-300 hover:text-white"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {t('makerworld.printFlow.backToPreview')}
+            </button>
+          </div>
+          <GcodeToolpathViewer
+            gcodeUrl={`${api.getLibraryFileGcodeUrl(result.library_file_id)}?plate=${plateNum}`}
+            filamentColors={gcodeColors.length > 0 ? gcodeColors : undefined}
+            className="flex-1 min-h-0"
+          />
+        </div>
+      )}
       {result.notice === 'creator_printer_settings_not_used' && (
         <p className="text-sm rounded-lg p-3 bg-amber-500/10 text-amber-300">
           {t('makerworld.printFlow.creatorPrinterSettingsNotUsed')}
@@ -400,7 +439,7 @@ function Preview({
         <Button
           variant="secondary"
           className="flex-1 min-w-[8rem]"
-          onClick={() => navigate(`/gcode-viewer?library_file=${result.library_file_id}&plate=${plateNum}`)}
+          onClick={() => setShowGcode(true)}
         >
           {t('makerworld.printFlow.gcodePreview')}
         </Button>

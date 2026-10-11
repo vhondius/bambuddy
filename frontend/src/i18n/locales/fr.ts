@@ -7520,6 +7520,7 @@ export default {
   makerworld: {
     notDownloadable: "Ancien plateau : MakerWorld ne le propose au téléchargement que sur son propre site.",
     printFlow: {
+      backToPreview: "Retour à l'aperçu",
       jobLost: "Le serveur n'a plus cette tâche (il a redémarré ou elle est trop ancienne). Réessaie.",
       filamentSlot: "Filament {{n}}",
       editSettings: "Modifier les réglages",
